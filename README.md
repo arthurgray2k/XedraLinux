@@ -4,7 +4,7 @@ Xedra is a small, educational Debian-based Linux distribution engineered from fi
 
 ## Core Design (0.1 Milestone)
 
-- **Base**: Debian Stable (`bookworm`, `amd64`)
+- **Base**: Debian Stable (`trixie`, `amd64`)
 - **Init System**: SysVinit (as PID 1; `systemd-sysv` is explicitly excluded)
 - **Display Server**: X11 (structured for future XLibre compatibility)
 - **Window Manager**: Fluxbox
@@ -20,10 +20,16 @@ Xedra is a small, educational Debian-based Linux distribution engineered from fi
 .
 ├── LICENSE          # GPL-3.0-or-later
 ├── README.md        # Distro architecture and documentation
+├── container/       # Isolated Debian build container definition
+│   └── Containerfile
 ├── config/          # Distro configurations (live-build configs, package lists, overlay roots)
 ├── output/          # Build artifacts and target ISO images
 └── scripts/         # Safe, modular, single-responsibility automation scripts
-    └── check-host.sh # Host readiness and virtualization validator
+    ├── check-host.sh
+    ├── check-container-runtime.sh
+    ├── build-builder-image.sh
+    ├── enter-builder.sh
+    └── check-builder.sh
 ```
 
 ## Quick Start
@@ -34,6 +40,24 @@ Before building any components or testing in the virtual machine, verify your ho
 
 ```bash
 ./scripts/check-host.sh
+```
+
+### 2. Validate Container Runtime (Podman)
+
+```bash
+./scripts/check-container-runtime.sh
+```
+
+### 3. Build the Isolated Debian Trixie Container
+
+```bash
+./scripts/build-builder-image.sh
+```
+
+### 4. Validate Isolated Build Environment
+
+```bash
+./scripts/check-builder.sh
 ```
 
 ## License
