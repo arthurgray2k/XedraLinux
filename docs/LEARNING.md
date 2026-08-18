@@ -30,10 +30,6 @@ virsh --connect qemu:///system list --all
 ./scripts/check-host.sh
 ```
 
-### Problems & Solutions:
-- *Challenge*: Detecting loaded KVM kernel modules across differing `lsmod` string formats.
-- *Solution*: Replaced regex pattern matching with robust column-specific `awk` parsing (`awk '$1 ~ /^(kvm_intel|kvm_amd)$/ {print $1}'`).
-
 ---
 
 ## Stage 2 - Isolated Debian Trixie Build Environment
@@ -68,27 +64,36 @@ virsh --connect qemu:///system list --all
 
 ## Stage 3 - First Debian Root Filesystem
 
-- **Status**: `Implemented (Scripts Ready for Execution)`
+- **Status**: `In Progress (Two-Stage Architecture Implemented)`
 - **Focus**: Bootstrapping a pure Debian Trixie base directory tree using `debootstrap` and inspecting its internal structure.
 
-### What Was Learned:
-1. **What `debootstrap` Actually Does**:
-   - It downloads `.deb` archives directly from `https://deb.debian.org/debian`.
-   - It unpacks the binary payloads into `/workspace/build/rootfs` using `ar` and `tar`.
-   - It initializes the DPKG package database at `/var/lib/dpkg/status` and runs package `postinst` scripts to set up basic configurations.
-2. **Rootfs vs. Bootable OS**:
-   - A root filesystem is a directory structure containing binaries and libraries, but it cannot boot by itself.
-   - It requires a bootloader (GRUB), a Linux kernel (`vmlinuz`), an initial ramdisk (`initrd.img`), and a PID 1 init system (SysVinit in Xedra) to become an operating system.
-3. **The Role of `chroot`**:
-   - `chroot` changes the visible root directory (`/`) for a process tree.
-   - It does not boot a kernel or start an init system; it simply allows running binaries against the target rootfs libraries.
+### Practical Lessons & Problems Encountered:
+
+#### Problem 1: Rootless Container `test-dev-null` Mount Failure
+- **Symptom**: `mount: /workspace/build/rootfs/test-dev-null: permission denied.` followed by `E: Cannot install into target '/workspace/build/rootfs' mounted with noexec`.
+- **Root Cause Analysis**:
+  1. `debootstrap` executes a pre-flight helper `check_sane_mount()` in `/usr/share/debootstrap/functions`.
+  2. It attempts `mknod "$TARGET/test-dev-null" c 1 3`.
+  3. Inside a rootless Podman container (unprivileged user namespace `CLONE_NEWUSER`), the Linux kernel forbids creating real device nodes (`mknod` returns `EPERM`).
+  4. When `mknod` fails, `check_sane_mount()` falls back to `mount -o bind /dev/null "$TARGET/test-dev-null"`.
+  5. In an unprivileged container without mount privileges on host bind volumes, `mount` fails with `permission denied`.
+  6. `debootstrap` emits a misleading error claiming the mount has `noexec`.
+- **Why `--privileged` Was Rejected**:
+  Running `--privileged` disables container security namespaces entirely. The educational objective is to learn why standard Debian tools behave this way and use the native solution.
+- **Solution (Two-Stage Bootstrap)**:
+  1. `export container=lxc` signals to `debootstrap` that it is running in an unprivileged container, skipping the invalid `test-dev-null` `mknod`/`mount` check.
+  2. `debootstrap --foreign` downloads and extracts all `.deb` archives (Stage 3A).
+  3. `chroot /workspace/build/rootfs /debootstrap/debootstrap --second-stage` configures all packages in dependency order and initializes `/var/lib/dpkg/status` (Stage 3B).
 
 ### Key Commands:
 ```bash
-# Bootstrap rootfs inside container
-/workspace/scripts/bootstrap-rootfs.sh
+# Stage 3A: Download & Extract base packages
+/workspace/scripts/bootstrap-rootfs.sh --clean
 
-# Inspect rootfs size, DPKG database, and structure
+# Stage 3B: Complete package configuration
+/workspace/scripts/complete-rootfs.sh
+
+# Inspect finalized rootfs
 /workspace/scripts/inspect-rootfs.sh
 
 # Educational chroot entry
