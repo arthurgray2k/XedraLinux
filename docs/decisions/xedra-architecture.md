@@ -1,0 +1,76 @@
+# Architectural Decision Records (ADR)
+
+This document records the foundational technical decisions for Xedra Linux, explaining the rationale, alternatives considered, and why each choice was made.
+
+---
+
+## 1. Upstream Base: Debian 13 "Trixie" (amd64)
+
+- **Decision**: Build Xedra directly on top of Debian 13 "Trixie" stable repositories without custom package forks.
+- **Reason**: Debian provides the largest, most stable collection of pre-compiled packages with transparent packaging standards and robust dependency tracking. Using Debian Stable guarantees reliability and avoids the burden of maintaining thousands of package builds.
+- **Alternatives Considered**:
+  - *Arch Linux*: Rolling release base; too volatile for a stable educational baseline.
+  - *Alpine Linux*: Musl-based; highly minimalist, but incompatible with standard glibc Debian packages and standard SysVinit patterns.
+  - *From Scratch (LFS)*: Compiling everything from source; over-engineers the build system and obscures package management concepts.
+- **Verdict**: **Debian 13 Trixie** provides the ideal balance of stability, package availability, and transparency.
+
+---
+
+## 2. Init System: SysVinit as PID 1
+
+- **Decision**: Enforce SysVinit (`sysvinit-core`) as PID 1. Strictly exclude `systemd-sysv`.
+- **Reason**: Educational clarity. SysVinit operates via clear shell scripts in `/etc/init.d/` and predictable runlevel symlinks in `/etc/rc*.d/`. Every service start and shutdown can be inspected, traced, and understood line-by-line without binary loggers or opaque service managers.
+- **Alternatives Considered**:
+  - *systemd*: Default Debian init system; powerful but introduces high complexity, tight subsystem coupling, binary journals, and opaque state management.
+  - *OpenRC / Runit*: Excellent lightweight init systems, but SysVinit is the classic Unix init standard natively supported in Debian repositories via `sysvinit-core`.
+- **Verdict**: **SysVinit** maximizes transparency and learning value.
+
+---
+
+## 3. Display Server: X11 with XLibre-Compatible Design
+
+- **Decision**: Use the X11 display stack for initial graphical output, structured to permit a future migration to XLibre.
+- **Reason**: X11 is mature, well-documented, runs on minimal resources without requiring Wayland compositor abstractions, and integrates directly with lightweight window managers like Fluxbox.
+- **Alternatives Considered**:
+  - *Wayland*: Modern display protocol, but requires a complex compositor (e.g. Sway, Wayfire) with heavier dependency footprints and less transparent low-level debugging.
+- **Verdict**: **X11** is simple, modular, and compatible with our minimal UI target.
+
+---
+
+## 4. Window Manager & Terminal: Fluxbox + xterm
+
+- **Decision**: Select Fluxbox as the window manager and `xterm` as the terminal emulator.
+- **Reason**: Fluxbox requires negligible RAM (~15-30 MB), has no background daemon dependencies, stores all configurations in clean plain text (`~/.fluxbox/menu`, `~/.fluxbox/init`), and provides a complete windowing environment without desktop portals or policy agents.
+- **Alternatives Considered**:
+  - *Full Desktop Environments (GNOME, KDE, Cinnamon, XFCE)*: Pull hundreds of background services, D-Bus daemons, display managers, and megabytes of dependencies.
+  - *i3 / bspwm*: Tiling window managers; excellent, but Fluxbox provides traditional floating windows that are immediately intuitive.
+- **Verdict**: **Fluxbox + xterm** delivers the smallest reasonably useful graphical desktop.
+
+---
+
+## 5. Build Environment: Rootless Podman Container
+
+- **Decision**: Execute all distribution bootstrapping and image generation inside a dedicated Debian 13 container (`xedra-builder:trixie`) managed via Podman on Linux Mint.
+- **Reason**: Prevents host cross-contamination. Linux Mint has Ubuntu-derived repositories that could pollute package dependency resolution. Podman runs daemonless in rootless user space, keeping the host pristine.
+- **Alternatives Considered**:
+  - *Direct Mint Host Installation*: Pollutes the host's `/etc/apt/` and package database.
+  - *Docker*: Requires a running background daemon with root privileges.
+  - *Dedicated Build VM*: High overhead and slow file sync compared to instant volume mounting.
+- **Verdict**: **Podman** provides clean container isolation with zero host mutation.
+
+---
+
+## 6. Testing Environment: Disposable QEMU/KVM Virtual Machine (`xedra-lab`)
+
+- **Decision**: Test the generated Xedra ISOs in a dedicated libvirt VM (`xedra-lab`) configured with 2 vCPUs, 2 GB RAM, and UEFI firmware.
+- **Reason**: Testing on virtualized hardware accurately replicates the physical PC boot lifecycle (UEFI firmware $\rightarrow$ GRUB $\rightarrow$ Linux kernel $\rightarrow$ initramfs $\rightarrow$ SysVinit $\rightarrow$ X11 $\rightarrow$ Fluxbox) without risking physical host disks.
+- **Alternatives Considered**:
+  - *Host chroot testing*: Cannot test the bootloader, kernel boot, or hardware device initialization.
+- **Verdict**: **QEMU/KVM** via `libvirt` provides real hardware virtualization safely.
+
+---
+
+## 7. Licensing & Attribution
+
+- **Decision**: License Xedra's original build tooling and scripts under **GPL-3.0-or-later**, documentation under **CC BY-SA 4.0**, and preserve upstream licenses for all Debian/Linux components.
+- **Reason**: Ensures open-source copyleft protection for Xedra tooling while strictly honoring upstream copyright and licensing.

@@ -1,0 +1,5 @@
+# Xedra Linux - Build Artifacts Ignore Rules
+build/
+output/*.iso
+output/*.img
+output/*.tar*
