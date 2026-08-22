@@ -22,12 +22,12 @@ Linux Host (Physical Workstation)
 
 - **Development Host**: Linux Host (`x86_64`) — Physical workstation; manages Git and hypervisor.
 - **Authoritative Builder VM (`xedra-builder`)**: Debian 13 Trixie (`amd64`, UEFI, 4 GB RAM, 35 GB Disk) — Houses the complete build toolchain.
-- **Target Xedra 0.1**: Minimal distribution (Debian 13 base, SysVinit PID 1, X11, Fluxbox, xterm).
+- **Target Xedra 0.3**: Minimal distribution (Debian 13 base, SysVinit PID 1, X11, Fluxbox, xterm, declarative JSON build manifest).
 - **Test VM (`xedra-lab`)**: Disposable libvirt VM (2 vCPU, 2 GB RAM, UEFI) — Boots and tests the output ISO.
 
 ---
 
-## Core Design (Xedra 0.1 Milestone)
+## Core Design (Xedra 0.3 Milestone)
 
 - **Base**: Debian Stable (`trixie`, `amd64`)
 - **Init System**: SysVinit (as PID 1; `systemd-sysv` is explicitly excluded)

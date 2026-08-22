@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Xedra Linux - Stage 8: Build Bootable Xedra 0.2 Live ISO
+# Xedra Linux - Stage 8: Build Bootable Xedra 0.3 Live ISO
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Purpose:
-#   Compiles the complete bootable Xedra 0.2 ISO image using Debian live-build
-#   inside the 'xedra-builder' VM, and outputs the result to output/xedra-0.2-amd64.iso.
+#   Compiles the complete bootable Xedra 0.3 ISO image using Debian live-build
+#   inside the 'xedra-builder' VM, and outputs the result to output/xedra-0.3-amd64.iso.
 #
 # Usage:
 #   sudo ./scripts/build-iso.sh                    # Default: Fast dev cached build
@@ -15,8 +15,8 @@
 #   sudo ./scripts/build-iso.sh --purge            # Force purge cache
 #
 # Output Artifacts:
-#   - output/xedra-0.2-amd64.iso
-#   - output/xedra-0.2-amd64.iso.sha256
+#   - output/xedra-0.3-amd64.iso
+#   - output/xedra-0.3-amd64.iso.sha256
 # ==============================================================================
 
 set -euo pipefail
@@ -33,12 +33,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 LB_DIR="${REPO_ROOT}/build/live-build"
 OUTPUT_DIR="${REPO_ROOT}/output"
-ISO_NAME="xedra-0.2-amd64.iso"
+ISO_NAME="xedra-0.3-amd64.iso"
 TARGET_ISO="${OUTPUT_DIR}/${ISO_NAME}"
 
 print_header() {
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
-    echo -e "${COLOR_BOLD}${COLOR_CYAN}  Xedra Linux - Compile Live ISO Image (v0.2)          ${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}  Xedra Linux - Compile Live ISO Image (v0.3)          ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
     echo "Workspace:      ${LB_DIR}"
     echo "Output Target:  ${TARGET_ISO}"
@@ -123,7 +123,7 @@ verify_iso() {
     echo ""
 
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
-    echo -e "${COLOR_BOLD}${COLOR_GREEN}  Xedra 0.2 ISO Successfully Built!                   ${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}${COLOR_GREEN}  Xedra 0.3 ISO Successfully Built!                   ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
     echo ""
     echo "Next Stage (Stage 9): Test the bootable ISO in the 'xedra-lab' VM!"

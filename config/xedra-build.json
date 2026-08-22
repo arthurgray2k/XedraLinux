@@ -2,12 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "distro": {
     "name": "Xedra Linux",
-    "version": "0.2",
+    "version": "0.3",
     "codename": "genesis",
     "init_system": "sysvinit",
-    "iso_application": "Xedra Linux 0.2",
+    "iso_application": "Xedra Linux 0.3",
     "iso_publisher": "Xedra Linux Project",
-    "iso_volume": "XEDRA_0_2"
+    "iso_volume": "XEDRA_0_3"
   },
   "debian_base": {
     "distribution": "trixie",

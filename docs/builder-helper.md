@@ -18,7 +18,7 @@ A consolidated cheat sheet for building, testing, configuring, and troubleshooti
 # Connect to builder VM
 ssh builder@192.168.122.180
 
-# Build Xedra 0.2 ISO with dev cache (~1–2 minutes)
+# Build Xedra 0.3 ISO with dev cache (~1–2 minutes)
 cd ~/XedraLinux
 git pull
 sudo ./scripts/build-iso.sh --profile=dev
@@ -28,12 +28,12 @@ sudo ./scripts/build-iso.sh --profile=dev
 ```bash
 cd ~/XedraLinux
 git pull
-scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.2-amd64.iso* output/
+scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.3-amd64.iso* output/
 ```
 
 ### Step 3: Launch Test VM (On Linux Host Terminal)
 ```bash
-./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.2-amd64.iso
+./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.3-amd64.iso
 virt-manager &
 ```
 
@@ -66,7 +66,7 @@ virt-manager &
 | :--- | :--- | :--- |
 | **Build Manifest & Profiles** | [`config/xedra-build.json`](file:///home/mint/XedraLinux/config/xedra-build.json) | Central versioning, profile definitions, mirrors, and user settings |
 | **SysVinit / Runlevels** | [`config/inittab`](file:///home/mint/XedraLinux/config/inittab) | PID 1 init configuration, runlevel 2, autologin on `tty1` |
-| **Desktop Startup & Styling** | [`config/xinitrc`](file:///home/mint/XedraLinux/config/xinitrc) | X11 wallpaper (`xsetroot`), SPICE agent, terminal launch, Fluxbox start |
+| **Desktop Startup & Resolution** | [`config/xinitrc`](file:///home/mint/XedraLinux/config/xinitrc) | Display resolution (1366x768 / 1280x800), wallpaper, SPICE, Fluxbox |
 | **Fluxbox Application Menu** | [`config/fluxbox/menu`](file:///home/mint/XedraLinux/config/fluxbox/menu) | Right-click desktop menu items, shortcuts, and commands |
 | **ISO Assembly Script** | [`scripts/build-iso.sh`](file:///home/mint/XedraLinux/scripts/build-iso.sh) | Orchestrates workspace generation, `lb build`, and ISO output |
 | **Chroot Transition Hook** | [`scripts/configure-live-build.sh`](file:///home/mint/XedraLinux/scripts/configure-live-build.sh) | In-chroot SysVinit + `elogind` atomic transition and user creation |
@@ -90,7 +90,7 @@ virt-manager &
 ### Lab Test VM (`xedra-lab`)
 ```bash
 # Create and launch fresh test VM
-./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.2-amd64.iso
+./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.3-amd64.iso
 
 # Destroy test VM
 ./scripts/vm/destroy-lab-vm.sh

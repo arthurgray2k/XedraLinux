@@ -25,12 +25,12 @@ RAM_MB=2048
 VCPUS=2
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-DEFAULT_ISO="${REPO_ROOT}/output/xedra-0.2-amd64.iso"
+DEFAULT_ISO="${REPO_ROOT}/output/xedra-0.3-amd64.iso"
 ISO_PATH="${1:-${DEFAULT_ISO}}"
 
 print_header() {
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
-    echo -e "${COLOR_BOLD}${COLOR_CYAN}  Xedra Linux - Launch 'xedra-lab' Test VM            ${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}  Xedra Linux - Launch 'xedra-lab' Test VM (v0.3)     ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
     echo "VM Name:   ${VM_NAME}"
     echo "RAM:       ${RAM_MB} MB"
@@ -49,7 +49,7 @@ verify_environment() {
         echo -e "${COLOR_RED}Error: Xedra Live ISO not found at '${ISO_PATH}'.${COLOR_RESET}" >&2
         echo "Please copy the ISO from xedra-builder to the host:"
         echo "  mkdir -p ${REPO_ROOT}/output"
-        echo "  scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.1-amd64.iso ${REPO_ROOT}/output/"
+        echo "  scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.3-amd64.iso ${REPO_ROOT}/output/"
         exit 1
     fi
 
