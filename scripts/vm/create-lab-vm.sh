@@ -77,7 +77,7 @@ launch_vm() {
         --name "${VM_NAME}" \
         --ram "${RAM_MB}" \
         --vcpus "${VCPUS}" \
-        --osinfo debian12 \
+        --osinfo generic \
         --disk pool=default,size=20,format=qcow2,bus=virtio \
         --cdrom "${ISO_PATH}" \
         --boot uefi \

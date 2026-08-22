@@ -98,14 +98,37 @@ sudo reboot
 
 ---
 
-## 4. Installer Roadmap (Milestones 0.2+)
+---
 
-For future releases, automated installation options will be integrated directly into the live ISO:
+## 4. Post-Installation Reboot & Media Ejection Runbook
 
-| Installer Option | Type | Description | Target Milestone |
-| :--- | :--- | :--- | :--- |
-| **`xedra-installer`** | Terminal / CLI TUI | Minimal shell/dialog menu asking for disk selection, confirmation, and automated GPT/UEFI/BIOS installation. | **Deployed in 0.4.1** |
-| **Calamares** | Modern Qt Graphical Installer | Modular GUI installer wizard with visual disk partitioning, timezone maps, and automated user creation. Used by distributions like EndeavourOS, Manjaro, and Lubuntu. | **Future Milestone** |
+When installing from a live environment, the running operating system relies on the live media (CD-ROM/USB) as its backing read storage. Ejecting the storage media while the live OS is actively executing binaries causes memory page faults (`SIGBUS` / `Bus error`).
+
+### Standard Post-Installation Lifecycle:
+
+```text
+┌───────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────────┐
+│ 1. Complete Installation  │ ──►  │ 2. Eject Live CD/USB Media│ ──►  │ 3. Reset / Boot from Disk │
+│ Files cloned & GRUB ready │      │ Disconnect ISO in KVM     │      │ VM boots /dev/vda (Root)  │
+└───────────────────────────┘      └───────────────────────────┘      └───────────────────────────┘
+```
+
+### Method A: Host CLI Reset (Recommended for Automated VMs)
+Once `xedra-installer` displays the success banner:
+
+```bash
+# 1. Disconnect the Live ISO from the virtual CD-ROM drive
+virsh --connect qemu:///system change-media xedra-lab sda --eject --config --live
+
+# 2. Reset the VM to boot immediately from the installed /dev/vda disk
+virsh --connect qemu:///system reset xedra-lab
+```
+
+### Method B: Graphical Interface (`virt-manager`)
+1. In `virt-manager`, open the VM details (blue lightbulb / `View` -> `Details`).
+2. Select **SATA CDROM 1** in the hardware list and click the **Clear / Disconnect (cross icon)** next to the ISO path.
+3. Click **Apply** at the bottom right.
+4. From the top menu, select **`Virtual Machine` -> `Shut Down` -> `Force Reset`** (or `Reboot`).
 
 ---
 
@@ -113,3 +136,4 @@ For future releases, automated installation options will be integrated directly 
 
 - **Xedra Linux** is packaged as a **Live Hybrid ISO** for rapid testing, demonstration, system recovery, and persistent installation.
 - Its internal root filesystem is **100% standard and fully installable** to persistent block devices via the integrated `/usr/local/bin/xedra-installer`.
+- On installed systems, standard SysVinit PID 1 boots directly from `/dev/vda` using persistent UUIDs in `/etc/fstab`.

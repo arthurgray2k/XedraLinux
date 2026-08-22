@@ -226,11 +226,23 @@ FSTAB_EOF
     # Install GRUB bootloader
     echo "Installing GRUB bootloader on ${TARGET_DISK}..."
     if [[ -d "/sys/firmware/efi" ]]; then
-        chroot "${TARGET_MOUNT}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=XedraLinux --recheck
+        chroot "${TARGET_MOUNT}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=XedraLinux --removable --recheck
+        # Ensure standard UEFI fallback executable exists for 100% firmware boot compatibility
+        mkdir -p "${TARGET_MOUNT}/boot/efi/EFI/BOOT"
+        if [[ -f "${TARGET_MOUNT}/boot/efi/EFI/XedraLinux/grubx64.efi" ]]; then
+            cp -f "${TARGET_MOUNT}/boot/efi/EFI/XedraLinux/grubx64.efi" "${TARGET_MOUNT}/boot/efi/EFI/BOOT/BOOTX64.EFI"
+        fi
     else
         chroot "${TARGET_MOUNT}" grub-install --target=i386-pc "${TARGET_DISK}" --recheck
     fi
     chroot "${TARGET_MOUNT}" update-grub
+
+    # Clean installer binary and menu shortcut from target installed system
+    echo "Cleaning up installer shortcuts on installed system..."
+    rm -f "${TARGET_MOUNT}/usr/local/bin/xedra-installer"
+    sed -i '/Install Xedra Linux/d' "${TARGET_MOUNT}/etc/skel/.fluxbox/menu" 2>/dev/null || true
+    sed -i '/Install Xedra Linux/d' "${TARGET_MOUNT}/home/xedra/.fluxbox/menu" 2>/dev/null || true
+    sed -i '/Install Xedra Linux/d' "${TARGET_MOUNT}/root/.fluxbox/menu" 2>/dev/null || true
 
     echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] GRUB bootloader configured successfully"
     echo ""
@@ -249,8 +261,10 @@ cleanup() {
     echo -e "${COLOR_BOLD}${COLOR_GREEN}  Xedra Linux Installation Completed Successfully!    ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
     echo ""
-    echo "You can now reboot your system and remove the Live USB/CD."
-    echo "Command to reboot: sudo reboot"
+    echo "Installation is complete! To boot into your installed system:"
+    echo "  1. In virt-manager or host: Eject/disconnect the Live CD-ROM/ISO."
+    echo "  2. Reset or reboot the VM (virt-manager: Virtual Machine -> Force Reset,"
+    echo "     or on host: virsh reset xedra-lab)."
     echo ""
 }
 
