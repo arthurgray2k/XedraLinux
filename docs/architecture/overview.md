@@ -2,46 +2,52 @@
 
 ## 1. System Topology
 
-Xedra Linux development uses a strict three-tier architecture that separates the development workstation, the build toolchain, and the target testing environment:
+Xedra Linux development uses a clean, reproducible architecture separating the development workstation, the authoritative build environment, and the testing hypervisor target:
 
 ```text
 +-------------------------------------------------------------------------------+
 |                            1. LINUX MINT HOST                                 |
 |  - Physical workstation OS: Linux Mint 22.3 (x86_64)                          |
-|  - Manages Git source tree at ~/XedraLinux                                    |
-|  - Runs hypervisor services (libvirt, QEMU/KVM) & container runtime (Podman)   |
+|  - Manages host hypervisor (libvirt, QEMU/KVM) & Git repository               |
+|  - Source tree at ~/XedraLinux (https://github.com/arthurgray2k/XedraLinux)   |
 |  - Unmodified: Host bootloader, kernel, and package trees are NEVER altered   |
 +-------------------------------------------------------------------------------+
                                          │
-                 Mounted as Volume: ~/XedraLinux -> /workspace
+                   Hypervisor: qemu:///system (Bridged / NAT)
                                          │
-                                         ▼
-+-------------------------------------------------------------------------------+
-|             2. ISOLATED DEBIAN BUILD ENVIRONMENT (Podman Container)           |
-|  Image: localhost/xedra-builder:trixie                                        |
-|                                                                               |
-|  - Base: Debian 13 "Trixie" (amd64)                                           |
-|  - Role: Constructs rootfs and ISO images using pure Debian Stable utilities  |
-|  - Tools: debootstrap, apt, dpkg, coreutils (live-build planned for later)    |
-|  - Output: Writes generated rootfs/ISOs into /workspace/build & /output       |
-+-------------------------------------------------------------------------------+
-                                         │
-                     Generated Artifact: output/xedra-0.1-amd64.iso
-                                         │
-                                         ▼
-+-------------------------------------------------------------------------------+
-|                     3. DISPOSABLE TEST TARGET (xedra-lab VM)                  |
-|  Hypervisor: QEMU/KVM via libvirt                                             |
-|                                                                               |
-|  - Specifications: 2 vCPUs, 2 GB RAM, 8 GB Virtual Disk, UEFI Firmware        |
-|  - Role: Boots the generated Xedra image in real virtualized hardware         |
-|  - Verifies: SysVinit PID 1, X11 display, Fluxbox WM, and xterm               |
-+-------------------------------------------------------------------------------+
+        ┌────────────────────────────────┴────────────────────────────────┐
+        │                                                                 │
+        ▼                                                                 ▼
++-----------------------------------------------+ +-----------------------------------------------+
+|         2. AUTHORITATIVE BUILD ENVIRONMENT    | |            3. DISPOSABLE TEST TARGET          |
+|                  (xedra-builder VM)           | |                   (xedra-lab VM)              |
+|                                               | |                                               |
+|  - OS: Debian 13 "Trixie" (amd64)             | |  - Specifications: 2 vCPU, 2 GB RAM, 8 GB Disk|
+|  - Specifications: 2 vCPUs, 4 GB RAM, 35 GB   | |  - Firmware: UEFI                             |
+|  - Firmware: UEFI                             | |  - Role: Boots generated Xedra ISO images     |
+|  - Desktop UI: Fluxbox, Firefox-ESR, xterm    | |  - Validates: SysVinit PID 1, X11, Fluxbox,  |
+|  - Toolchain: debootstrap, live-build,        | |    and xterm in real virtualized hardware     |
+|    xorriso, squashfs-tools, grub-efi-bin      | +-----------------------------------------------+
+|  - Local Working Tree: ~/XedraLinux           |                         ▲
+|  - Artifact Output: ~/XedraLinux/output/      |                         │
+|    └── xedra-0.1-amd64.iso ───────────────────┼─────────────────────────┘
++-----------------------------------------------+
 ```
 
 ---
 
-## 2. Target Operating System Stack (Xedra 0.1 Milestone)
+## 2. Distinction Between Environments
+
+| Layer | Environment | Purpose | Modifies Physical Host? |
+| :--- | :--- | :--- | :--- |
+| **Development Host** | Linux Mint 22.3 (`x86_64`) | Physical workstation, IDE, Git, VM orchestration | **No** |
+| **Builder VM (`xedra-builder`)** | Debian 13 Trixie (amd64) | Authoritative OS build environment with full Linux kernel capabilities for `debootstrap` and `live-build` | **No** (Isolated in virtual disk) |
+| **Target Xedra 0.1** | Debian 13 Base (amd64) | Minimal distribution under construction (SysVinit, Fluxbox, xterm, X11) | N/A (Emitted as ISO) |
+| **Testing VM (`xedra-lab`)** | Virtualized Hardware (UEFI) | Disposable hardware testbed for booting and verifying Xedra ISOs | **No** (Disposable virtual disk) |
+
+---
+
+## 3. Target Operating System Stack (Xedra 0.1 Milestone)
 
 When assembled and booted in the `xedra-lab` VM, Xedra 0.1 consists of the following technical layers:
 
@@ -85,13 +91,17 @@ When assembled and booted in the `xedra-lab` VM, Xedra 0.1 consists of the follo
 
 ---
 
-## 3. Directory Layout & Roles
+## 4. Directory Layout & Roles
 
-| Directory | Purpose |
-| :--- | :--- |
-| `container/` | Containerfile definitions for the isolated Debian Trixie build container. |
-| `config/` | Distribution configuration overlays, package lists, and SysVinit init scripts. |
-| `scripts/` | Modular, single-responsibility automation scripts adhering to `set -euo pipefail`. |
-| `docs/` | Comprehensive technical and educational documentation explaining the *how* and *why*. |
-| `build/` | Intermediate build staging area (e.g. bootstrapped Debian root filesystem). |
-| `output/` | Final distribution artifacts (e.g. bootable ISO images). |
+```text
+~/XedraLinux/
+├── LICENSE          # GPL-3.0-or-later for Xedra tooling
+├── README.md        # Distro overview and quickstart
+├── config/          # live-build configurations, package lists, and SysVinit scripts
+├── container/       # (Historical) Stage 2 Podman container definitions
+├── docs/            # Architecture, concept explanations, decisions, and stage logs
+├── output/          # Build artifacts and target ISO images
+└── scripts/         # Automation scripts
+    ├── check-host.sh
+    └── vm/          # VM lifecycle scripts (create, start, stop, inspect, destroy, bootstrap)
+```

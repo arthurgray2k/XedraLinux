@@ -39,7 +39,7 @@ This document records the foundational technical decisions for Xedra Linux, expl
 
 ## 4. Window Manager & Terminal: Fluxbox + xterm
 
-- **Decision**: Select Fluxbox as the window manager and `xterm` as the terminal emulator.
+- **Decision**: Select Fluxbox as the window manager and `xterm` as the terminal emulator for Xedra.
 - **Reason**: Fluxbox requires negligible RAM (~15-30 MB), has no background daemon dependencies, stores all configurations in clean plain text (`~/.fluxbox/menu`, `~/.fluxbox/init`), and provides a complete windowing environment without desktop portals or policy agents.
 - **Alternatives Considered**:
   - *Full Desktop Environments (GNOME, KDE, Cinnamon, XFCE)*: Pull hundreds of background services, D-Bus daemons, display managers, and megabytes of dependencies.
@@ -48,15 +48,15 @@ This document records the foundational technical decisions for Xedra Linux, expl
 
 ---
 
-## 5. Build Environment: Rootless Podman Container
+## 5. Build Environment Architecture: Dedicated Debian 13 VM (`xedra-builder`)
 
-- **Decision**: Execute all distribution bootstrapping and image generation inside a dedicated Debian 13 container (`xedra-builder:trixie`) managed via Podman on Linux Mint.
-- **Reason**: Prevents host cross-contamination. Linux Mint has Ubuntu-derived repositories that could pollute package dependency resolution. Podman runs daemonless in rootless user space, keeping the host pristine.
+- **Decision**: Use a dedicated Debian 13 (Trixie) virtual machine (`xedra-builder`) running on KVM/libvirt as the authoritative build environment for all Xedra distro engineering.
+- **Reason**: Distribution engineering tools (`debootstrap`, `live-build`, `losetup`, `mksquashfs`, `xorriso`, `grub-mkstandalone`) require uncompromised Linux kernel privileges (creating real device nodes, loopback devices, and mounting pseudo-filesystems). A dedicated builder VM provides full kernel capabilities safely without granting dangerous `--privileged` root access to containers on the physical Linux Mint host.
 - **Alternatives Considered**:
-  - *Direct Mint Host Installation*: Pollutes the host's `/etc/apt/` and package database.
-  - *Docker*: Requires a running background daemon with root privileges.
-  - *Dedicated Build VM*: High overhead and slow file sync compared to instant volume mounting.
-- **Verdict**: **Podman** provides clean container isolation with zero host mutation.
+  - *Rootless Podman Container*: Evaluated in Stage 2; hit kernel user-namespace limits (`mknod`, nested `mount`).
+  - *Privileged Container on Host*: Weakens host security by disabling container isolation mechanisms.
+  - *Direct Build on Mint Host*: Pollutes host `/etc/apt/` and package database with cross-distro packages.
+- **Verdict**: **Dedicated Debian 13 VM (`xedra-builder`)** is the cleanest, most secure, and most standard approach.
 
 ---
 
