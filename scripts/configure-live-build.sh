@@ -258,14 +258,15 @@ update-rc.d udev defaults 2>/dev/null || true
 update-rc.d dbus defaults 2>/dev/null || true
 update-rc.d elogind defaults 2>/dev/null || true
 
-# Configure auto-startx on tty1 for xedra user directly on VT1
-cat << 'PROFILE_EOF' > /home/xedra/.profile
+# Configure auto-startx on tty1 for xedra user directly on VT1 (both /etc/skel and /home/xedra)
+cat << 'PROFILE_EOF' > /etc/skel/.profile
 # ~/.profile: executed by Bourne-compatible login shells
 if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
-    exec startx -- vt1 -keeptty
+    startx -- vt1 -keeptty
 fi
 PROFILE_EOF
-chown xedra:xedra /home/xedra/.profile
+cp /etc/skel/.profile /home/xedra/.profile
+chown -R xedra:xedra /home/xedra
 
 # Configure networking interfaces for automatic DHCP
 cat << 'NET_EOF' > /etc/network/interfaces
@@ -319,6 +320,18 @@ XWRAP_EOF
         chmod 755 "${LB_DIR}/config/includes.chroot/home/xedra/.xinitrc"
         echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] .xinitrc overlay added"
     fi
+
+    # Install .profile with autostart into /etc/skel and /home/xedra so live-config user creation preserves startx
+    cat << 'PROFILE_EOF' > "${LB_DIR}/config/includes.chroot/etc/skel/.profile"
+# ~/.profile: executed by Bourne-compatible login shells
+if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    startx -- vt1 -keeptty
+fi
+PROFILE_EOF
+    cp "${LB_DIR}/config/includes.chroot/etc/skel/.profile" "${LB_DIR}/config/includes.chroot/home/xedra/.profile"
+    chmod 644 "${LB_DIR}/config/includes.chroot/etc/skel/.profile"
+    chmod 644 "${LB_DIR}/config/includes.chroot/home/xedra/.profile"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] .profile (auto-startx) overlay added to /etc/skel and /home/xedra"
 
     # Copy Fluxbox menu
     if [[ -f "${CONFIG_DIR}/fluxbox/menu" ]]; then

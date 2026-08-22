@@ -28,9 +28,9 @@ pf::powerfail:/sbin/shutdown -f +2 "Power Failure; System Shutting Down"
 pr:12345:powerokwait:/sbin/shutdown -c "Power Restored; Shutdown Cancelled"
 
 # Standard Virtual Terminals: tty1 configured for auto-login into xedra live desktop
-1:2345:respawn:/sbin/getty --autologin xedra --noclear 38400 tty1
-2:23:respawn:/sbin/getty 38400 tty2
-3:23:respawn:/sbin/getty 38400 tty3
-4:23:respawn:/sbin/getty 38400 tty4
-5:23:respawn:/sbin/getty 38400 tty5
-6:23:respawn:/sbin/getty 38400 tty6
+1:2345:respawn:/sbin/getty --noclear --autologin xedra tty1 38400 linux
+2:23:respawn:/sbin/getty tty2 38400 linux
+3:23:respawn:/sbin/getty tty3 38400 linux
+4:23:respawn:/sbin/getty tty4 38400 linux
+5:23:respawn:/sbin/getty tty5 38400 linux
+6:23:respawn:/sbin/getty tty6 38400 linux
