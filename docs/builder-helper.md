@@ -104,7 +104,46 @@ virt-manager &
 
 ---
 
-## 6. Documentation & Architecture Index
+---
+
+## 6. Package & Stage Caching Architecture
+
+To achieve rapid 2–3 minute build iterations, `live-build` uses a multi-tier local caching subsystem located at `~/XedraLinux/build/live-build/cache/`:
+
+```text
+~/XedraLinux/build/live-build/cache/
+├── packages.bootstrap/    ──► Base Debian .deb archives (downloaded by debootstrap)
+├── packages.chroot/       ──► Distro packages (Python, Go, Micro, Kernel, Fluxbox, X11)
+├── packages.binary/       ──► Bootloader packages (GRUB, syslinux)
+└── stages_bootstrap/      ──► Base rootfs filesystem snapshot (skips debootstrap)
+```
+
+### Cold vs. Warm Build Behavior:
+* **Cold Build (First Run / Cache Miss)**:
+  - Downloads ~450 `.deb` packages from `deb.debian.org`.
+  - Runs `debootstrap` and generates the pristine `stages_bootstrap` image.
+  - Runtime: **~12–15 minutes** (dependent on internet mirror bandwidth).
+* **Warm Build (Subsequent Iterations)**:
+  - `debootstrap` is skipped entirely; `stages_bootstrap` is restored locally in **~3 seconds**.
+  - All `.deb` packages are installed from `cache/packages.chroot/` with `force-unsafe-io` in **~45 seconds**.
+  - SquashFS image is compressed with `gzip -1` in **~15 seconds**.
+  - Total Runtime: **~2–3 minutes**.
+
+### Managing & Inspecting Cache (Inside `xedra-builder` VM):
+```bash
+# Check total disk space consumed by caches
+du -sh ~/XedraLinux/build/live-build/cache/*
+
+# Count total cached .deb packages
+ls -1 ~/XedraLinux/build/live-build/cache/packages.chroot/*.deb | wc -l
+
+# Force a clean purge and fresh download (Release Mode)
+sudo ./scripts/build-iso.sh --profile=release
+```
+
+---
+
+## 7. Documentation & Architecture Index
 
 - **SysVinit Deep Dive**: [`docs/concepts/sysvinit-architecture-and-boot-lifecycle.md`](file:///home/mint/XedraLinux/docs/concepts/sysvinit-architecture-and-boot-lifecycle.md)
 - **Deployment & Installation Model**: [`docs/concepts/installation-and-deployment-model.md`](file:///home/mint/XedraLinux/docs/concepts/installation-and-deployment-model.md)

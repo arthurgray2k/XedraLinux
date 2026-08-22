@@ -71,7 +71,7 @@ check_existing_vm() {
 launch_vm() {
     echo -e "${COLOR_BOLD}--- Launching 'xedra-lab' with UEFI Firmware & 20GB Target Disk ---${COLOR_RESET}"
     
-    # Launch ephemeral UEFI VM with 20GB target hard drive and permanent CD-ROM boot priority #1
+    # Launch ephemeral UEFI VM with 20GB target hard drive and ISO boot media
     virt-install \
         --connect qemu:///system \
         --name "${VM_NAME}" \
@@ -79,7 +79,7 @@ launch_vm() {
         --vcpus "${VCPUS}" \
         --osinfo debian12 \
         --disk pool=default,size=20,format=qcow2,bus=virtio \
-        --disk path="${ISO_PATH}",device=cdrom,readonly=on,boot.order=1 \
+        --cdrom "${ISO_PATH}" \
         --boot uefi \
         --network network=default,model=virtio \
         --graphics spice \
