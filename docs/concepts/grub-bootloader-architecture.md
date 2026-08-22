@@ -40,7 +40,7 @@ To support both Live ISO assembly and native hard disk installation, the followi
 | :--- | :--- | :--- |
 | **`grub2-common`** | `/usr/sbin/grub-install`<br>`/usr/sbin/update-grub`<br>`/usr/sbin/grub-mkconfig`<br>`/etc/grub.d/*` | Core bootloader toolchain. Provides the `grub-install` executable and configuration generators used by `xedra-installer`. |
 | **`grub-efi-amd64`** | `/usr/lib/grub/x86_64-efi/*`<br>`grubx64.efi`<br>Pulls `efibootmgr` | 64-bit UEFI target drivers and firmware variable management tools required to install GRUB into the EFI System Partition (ESP). |
-| **`grub-pc`** | `/usr/lib/grub/i386-pc/*`<br>`boot.img`<br>`core.img` | Legacy BIOS / MBR stage 1 and stage 2 drivers, ensuring fallback compatibility for non-UEFI physical machines or virtual hardware. |
+| **`grub-pc-bin`** | `/usr/lib/grub/i386-pc/*`<br>`boot.img`<br>`core.img` | Legacy BIOS / MBR stage 1 and stage 2 drivers. Modular package that co-exists cleanly with `grub-efi-amd64` without trigger conflicts. |
 | **`dosfstools`** | `/usr/sbin/mkfs.fat`<br>`/usr/sbin/fsck.fat` | Used by `xedra-installer` to format the 512 MB ESP partition (`/dev/vda1`) as FAT32. |
 | **`parted`** | `/usr/sbin/parted` | Used by `xedra-installer` to create the standard GPT partition table, 512 MB ESP partition with `esp on` flag, and root `ext4` partition. |
 | **`e2fsprogs`** | `/usr/sbin/mkfs.ext4` | Used by `xedra-installer` to format the main root filesystem (`/dev/vda2`). |
@@ -55,7 +55,7 @@ To support both Live ISO assembly and native hard disk installation, the followi
   * **Parameter**: `lb config --bootloader grub-efi --binary-images iso-hybrid`
   * **Role**: Directs `live-build` to generate a dual-mode hybrid ISO containing both UEFI GRUB (`EFI/BOOT/BOOTX64.EFI`) and BIOS ISOLINUX boot structures.
 * **Function**: `configure_xedra_packages()`
-  * **Role**: Writes `grub2-common`, `grub-efi-amd64`, and `grub-pc` into `config/package-lists/xedra.list.chroot` so that the live root filesystem contains all bootloader installation tools.
+  * **Role**: Writes `grub2-common`, `grub-efi-amd64`, and `grub-pc-bin` into `config/package-lists/xedra.list.chroot` so that the live root filesystem contains all bootloader installation tools.
 
 ---
 

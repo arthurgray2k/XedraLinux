@@ -243,7 +243,7 @@ dosfstools
 e2fsprogs
 rsync
 grub-efi-amd64
-grub-pc
+grub-pc-bin
 grub2-common
 
 # 4. Networking & System Utilities
