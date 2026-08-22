@@ -47,24 +47,29 @@ verify_environment() {
 
     if [[ ! -d "${LB_DIR}/config" ]]; then
         echo -e "${COLOR_RED}Error: live-build configuration not found in '${LB_DIR}'.${COLOR_RESET}" >&2
-        echo "Please run Step 07 first: ./scripts/configure-live-build.sh" >&2
+        echo "Please run Step 07 first: sudo ./scripts/configure-live-build.sh" >&2
         exit 1
     fi
 
     mkdir -p "${OUTPUT_DIR}"
 }
 
+clean_workspace() {
+    echo -e "${COLOR_BOLD}--- 1. Cleaning Previous Chroot & Cache ---${COLOR_RESET}"
+    cd "${LB_DIR}"
+    echo "Running 'lb clean --purge' to wipe any previous failed chroot state..."
+    lb clean --purge 2>/dev/null || true
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Workspace cleaned"
+    echo ""
+}
+
 compile_iso() {
-    echo -e "${COLOR_BOLD}--- 1. Executing 'lb build' ---${COLOR_RESET}"
-    echo "Compiling live rootfs, squashfs, bootloaders, and hybrid ISO..."
+    echo -e "${COLOR_BOLD}--- 2. Executing 'lb build' ---${COLOR_RESET}"
+    echo "Compiling live rootfs, kernel, squashfs, bootloaders, and hybrid ISO..."
     echo "This may take 3–7 minutes depending on network and CPU speed."
     echo ""
 
     cd "${LB_DIR}"
-    # Clean previous interrupted builds if any
-    lb clean --binary 2>/dev/null || true
-    
-    # Run the build
     lb build
 
     echo ""
@@ -73,7 +78,7 @@ compile_iso() {
 }
 
 package_artifacts() {
-    echo -e "${COLOR_BOLD}--- 2. Packaging Output Artifacts ---${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}--- 3. Packaging Output Artifacts ---${COLOR_RESET}"
     mkdir -p "${OUTPUT_DIR}"
 
     # Locate generated ISO
@@ -106,7 +111,7 @@ package_artifacts() {
 }
 
 verify_iso() {
-    echo -e "${COLOR_BOLD}--- 3. Verifying Final ISO Artifact ---${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}--- 4. Verifying Final ISO Artifact ---${COLOR_RESET}"
     
     local size_human
     size_human="$(du -sh "${TARGET_ISO}" | awk '{print $1}')"
@@ -126,6 +131,7 @@ verify_iso() {
 main() {
     print_header
     verify_environment
+    clean_workspace
     compile_iso
     package_artifacts
     verify_iso
