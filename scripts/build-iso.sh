@@ -33,14 +33,41 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 LB_DIR="${REPO_ROOT}/build/live-build"
 OUTPUT_DIR="${REPO_ROOT}/output"
-ISO_NAME="xedra-0.3-amd64.iso"
+CONFIG_DIR="${REPO_ROOT}/config"
+JSON_CONFIG="${CONFIG_DIR}/xedra-build.json"
+
+# Determine active profile from arguments
+BUILD_PROFILE="dev"
+for arg in "$@"; do
+    case "${arg}" in
+        --profile=*)
+            BUILD_PROFILE="${arg#*=}"
+            ;;
+        --purge)
+            BUILD_PROFILE="release"
+            ;;
+    esac
+done
+
+ISO_NAME="xedra-0.4-amd64.iso"
+if [[ -f "${JSON_CONFIG}" ]] && command -v python3 >/dev/null 2>&1; then
+    ISO_NAME="$(python3 -c "
+import json
+with open('${JSON_CONFIG}') as f:
+    d = json.load(f)
+p = d.get('profiles', {}).get('${BUILD_PROFILE}', d.get('profiles', {}).get('dev', {}))
+ver = d.get('distro', {}).get('version', '0.4')
+print(p.get('iso_name', f'xedra-{ver}-amd64.iso'))
+")"
+fi
 TARGET_ISO="${OUTPUT_DIR}/${ISO_NAME}"
 
 print_header() {
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
-    echo -e "${COLOR_BOLD}${COLOR_CYAN}  Xedra Linux - Compile Live ISO Image (v0.3)          ${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}  Xedra Linux - Compile Live ISO Image (v0.4)          ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
     echo "Workspace:      ${LB_DIR}"
+    echo "Active Profile: ${BUILD_PROFILE}"
     echo "Output Target:  ${TARGET_ISO}"
     echo ""
 }
@@ -123,7 +150,7 @@ verify_iso() {
     echo ""
 
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
-    echo -e "${COLOR_BOLD}${COLOR_GREEN}  Xedra 0.3 ISO Successfully Built!                   ${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}${COLOR_GREEN}  Xedra Live ISO Successfully Built!                  ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
     echo ""
     echo "Next Stage (Stage 9): Test the bootable ISO in the 'xedra-lab' VM!"
