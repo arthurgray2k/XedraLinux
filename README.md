@@ -22,22 +22,24 @@ Linux Host (Physical Workstation)
 
 - **Development Host**: Linux Host (`x86_64`) — Physical workstation; manages Git and hypervisor.
 - **Authoritative Builder VM (`xedra-builder`)**: Debian 13 Trixie (`amd64`, UEFI, 4 GB RAM, 35 GB Disk) — Houses the complete build toolchain.
-- **Target Xedra 0.3**: Minimal distribution (Debian 13 base, SysVinit PID 1, X11, Fluxbox, xterm, declarative JSON build manifest).
+- **Target Xedra 0.4**: Modern lightweight distribution (Debian 13 base, SysVinit PID 1, Python 3, Golang, Micro editor, native installer, Fluxbox GUI or Minimal CLI).
 - **Test VM (`xedra-lab`)**: Disposable libvirt VM (2 vCPU, 2 GB RAM, UEFI) — Boots and tests the output ISO.
 
 ---
 
-## Core Design (Xedra 0.3 Milestone)
+## Core Design (Xedra 0.4 Milestone)
 
-- **Base**: Debian Stable (`trixie`, `amd64`)
-- **Init System**: SysVinit (as PID 1; `systemd-sysv` is explicitly excluded)
-- **Display Server**: X11 (structured for future XLibre compatibility)
-- **Window Manager**: Fluxbox
-- **Terminal**: `xterm`
-- **Package Management**: `apt` / `dpkg` (direct upstream Debian packages)
-- **Bootloader & Firmware**: GRUB with UEFI support
-- **Image Tooling**: Debian `live-build` & `debootstrap` inside `xedra-builder` VM
-- **Testing Target**: `xedra-lab` on QEMU/KVM via `libvirt`
+- **Base**: Debian 13 ("Trixie", `amd64`)
+- **Init System**: Pure SysVinit (PID 1; `systemd-sysv` explicitly excluded, elogind seat manager)
+- **Toolchains & Languages**: Python 3 (`python3`, `pip`, `venv`) and Golang (`golang-go`)
+- **Editors**: `micro` modern terminal editor (+ `nano`, `vim-tiny`)
+- **System Installer**: Native interactive TUI/CLI installer (`/usr/local/bin/xedra-installer`) with GPT/UEFI/BIOS support
+- **Profiles**:
+  - **`dev`**: Fast uncompressed SquashFS with persistent package cache + Fluxbox GUI (`xedra-0.4-amd64.iso`)
+  - **`release`**: Pristine production build with high XZ compression (`xedra-0.4-amd64.iso`)
+  - **`minimal`**: Lightweight CLI-only rescue/server edition with pure text console (`xedra-0.4-minimal-amd64.iso`)
+- **Display Server & GUI**: X11 (`xserver-xorg-legacy`, console rights) + Fluxbox + `xterm` + SPICE guest agent (1600x900)
+- **Bootloader & Firmware**: Hybrid GRUB with UEFI + BIOS support
 
 ---
 

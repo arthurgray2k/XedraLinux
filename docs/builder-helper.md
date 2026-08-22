@@ -18,22 +18,28 @@ A consolidated cheat sheet for building, testing, configuring, and troubleshooti
 # Connect to builder VM
 ssh builder@192.168.122.180
 
-# Build Xedra 0.3 ISO with dev cache (~1–2 minutes)
+# Build Xedra 0.4 ISO with dev cache (~1–2 minutes with uncompressed squashfs)
 cd ~/XedraLinux
 git pull
 sudo ./scripts/build-iso.sh --profile=dev
+
+# Or build the minimal CLI-only edition:
+# sudo ./scripts/build-iso.sh --profile=minimal
 ```
 
 ### Step 2: Transfer the ISO (On Linux Host Terminal)
 ```bash
 cd ~/XedraLinux
 git pull
-scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.3-amd64.iso* output/
+scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.4-amd64.iso* output/
+
+# (Or for minimal edition):
+# scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.4-minimal-amd64.iso* output/
 ```
 
 ### Step 3: Launch Test VM (On Linux Host Terminal)
 ```bash
-./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.3-amd64.iso
+./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.4-amd64.iso
 virt-manager &
 ```
 
@@ -51,12 +57,12 @@ virt-manager &
 
 ## 3. Build Profiles Reference (`config/xedra-build.json`)
 
-| Command | Profile | Caching | Purge | Best Used For |
+| Command | Profile | Target Output ISO | Desktop Mode | Compression |
 | :--- | :--- | :--- | :--- | :--- |
-| `sudo ./scripts/build-iso.sh` | `dev` | **Enabled** | **No** | Rapid everyday iteration (~1–2 min build) |
-| `sudo ./scripts/build-iso.sh --profile=dev` | `dev` | **Enabled** | **No** | Explicit dev profile invocation |
-| `sudo ./scripts/build-iso.sh --profile=release` | `release` | Disabled | **Yes** | Official pristine releases (fetches fresh upstream packages) |
-| `sudo ./scripts/build-iso.sh --profile=minimal` | `minimal` | **Enabled** | **No** | Headless text-only server edition |
+| `sudo ./scripts/build-iso.sh` | `dev` | `xedra-0.4-amd64.iso` | **Fluxbox GUI (1600x900)** | Uncompressed (Fast) |
+| `sudo ./scripts/build-iso.sh --profile=dev` | `dev` | `xedra-0.4-amd64.iso` | **Fluxbox GUI (1600x900)** | Uncompressed (Fast) |
+| `sudo ./scripts/build-iso.sh --profile=release` | `release` | `xedra-0.4-amd64.iso` | **Fluxbox GUI (1600x900)** | XZ (Max Compression) |
+| `sudo ./scripts/build-iso.sh --profile=minimal` | `minimal` | `xedra-0.4-minimal-amd64.iso` | **CLI Console Only** | Uncompressed (Fast) |
 
 ---
 
