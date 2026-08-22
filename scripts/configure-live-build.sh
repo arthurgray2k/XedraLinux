@@ -144,6 +144,7 @@ prepare_workspace() {
         --architectures "${DEBIAN_ARCH}" \
         --binary-images iso-hybrid \
         --bootloader grub-efi \
+        --initsystem sysvinit \
         --archive-areas "${DEBIAN_ARCHIVE_AREAS}" \
         --mirror-bootstrap "${DEBIAN_MIRROR_BOOTSTRAP}" \
         --mirror-binary "${DEBIAN_MIRROR_BINARY}" \
