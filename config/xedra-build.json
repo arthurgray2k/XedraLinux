@@ -19,10 +19,10 @@
   "default_profile": "dev",
   "profiles": {
     "dev": {
-      "description": "Fast iterative development profile with persistent local package caching",
+      "description": "Fast iterative development profile with persistent local package caching and uncompressed squashfs",
       "cache_packages": true,
       "purge_on_clean": false,
-      "squashfs_compression": "gzip",
+      "squashfs_compression": "none",
       "apt_recommends": false
     },
     "release": {
@@ -36,7 +36,7 @@
       "description": "Minimal text-only headless rescue edition",
       "cache_packages": true,
       "purge_on_clean": false,
-      "squashfs_compression": "gzip",
+      "squashfs_compression": "none",
       "apt_recommends": false
     }
   },

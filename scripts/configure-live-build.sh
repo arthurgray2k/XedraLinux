@@ -85,6 +85,7 @@ print(f'DEBIAN_MIRROR_BOOTSTRAP=\"{d.get(\"debian_base\", {}).get(\"mirror_boots
 print(f'DEBIAN_MIRROR_BINARY=\"{d.get(\"debian_base\", {}).get(\"mirror_binary\", \"https://deb.debian.org/debian\")}\"')
 print(f'CACHE_PACKAGES={str(p.get(\"cache_packages\", True)).lower()}')
 print(f'PURGE_ON_CLEAN={str(p.get(\"purge_on_clean\", False)).lower()}')
+print(f'SQUASHFS_COMPRESSION=\"{p.get(\"squashfs_compression\", \"none\")}\"')
 print(f'LIVE_HOSTNAME=\"{d.get(\"live_session\", {}).get(\"hostname\", \"xedra\")}\"')
 print(f'LIVE_USERNAME=\"{d.get(\"live_session\", {}).get(\"username\", \"xedra\")}\"')
 print(f'LIVE_USER_GROUPS=\"{d.get(\"live_session\", {}).get(\"user_groups\", \"sudo,audio,video,cdrom,plugdev,kvm,input,tty\")}\"')
@@ -100,6 +101,7 @@ print_header() {
     echo "Distribution:         ${DISTRO_NAME} ${DISTRO_VERSION} (${DISTRO_CODENAME})"
     echo "Active Profile:       ${BUILD_PROFILE}"
     echo "Package Caching:      ${CACHE_PACKAGES}"
+    echo "Squashfs Compression: ${SQUASHFS_COMPRESSION}"
     echo "Purge on Clean:       ${PURGE_ON_CLEAN}"
     echo "Workspace:            ${LB_DIR}"
     echo "Init System:          SysVinit (PID 1)"
@@ -161,7 +163,17 @@ prepare_workspace() {
         --apt-recommends false \
         --verbose
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated (Profile: ${BUILD_PROFILE})"
+    # Configure squashfs compression based on profile (uncompressed for dev, xz for release)
+    local mksquash_opt="-no-compression"
+    if [[ "${SQUASHFS_COMPRESSION}" == "xz" ]]; then
+        mksquash_opt="-comp xz"
+    elif [[ "${SQUASHFS_COMPRESSION}" == "gzip" ]]; then
+        mksquash_opt="-comp gzip -Xcompression-level 1"
+    fi
+    mkdir -p "${LB_DIR}/config"
+    echo "MKSQUASHFS_OPTIONS=\"${mksquash_opt}\"" >> "${LB_DIR}/config/binary"
+
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated (Profile: ${BUILD_PROFILE}, Squashfs: ${SQUASHFS_COMPRESSION})"
     echo ""
 }
 
