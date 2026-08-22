@@ -150,7 +150,26 @@ apt-get install -y --no-install-recommends \
     systemd-sysv- \
     --allow-remove-essential
 
-echo "=== [XEDRA HOOK] SysVinit installed; systemd-sysv purged ==="
+echo "=== [XEDRA HOOK] Setting default users and passwords ==="
+# Set root password to 'root'
+echo "root:root" | chpasswd
+
+# Create xedra live user with password 'xedra' and sudo privileges
+useradd -m -s /bin/bash -G sudo,audio,video,cdrom,plugdev,kvm xedra 2>/dev/null || true
+echo "xedra:xedra" | chpasswd
+
+# Grant passwordless sudo to xedra user
+mkdir -p /etc/sudoers.d
+echo "xedra ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/xedra
+chmod 0440 /etc/sudoers.d/xedra
+
+# Ensure user directory ownership and xinitrc
+cp /etc/skel/.xinitrc /home/xedra/.xinitrc 2>/dev/null || true
+mkdir -p /home/xedra/.fluxbox
+cp /etc/skel/.fluxbox/menu /home/xedra/.fluxbox/menu 2>/dev/null || true
+chown -R xedra:xedra /home/xedra 2>/dev/null || true
+
+echo "=== [XEDRA HOOK] SysVinit installed; credentials configured ==="
 EOF
 
     chmod +x "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"

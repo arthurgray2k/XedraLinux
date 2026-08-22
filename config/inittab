@@ -27,8 +27,8 @@ ca:12345:ctrlaltdel:/sbin/shutdown -t1 -a -r now
 pf::powerfail:/sbin/shutdown -f +2 "Power Failure; System Shutting Down"
 pr:12345:powerokwait:/sbin/shutdown -c "Power Restored; Shutdown Cancelled"
 
-# Standard Virtual Terminals (getty on tty1 through tty6)
-1:2345:respawn:/sbin/getty 38400 tty1
+# Standard Virtual Terminals: tty1 configured for auto-login into xedra live desktop
+1:2345:respawn:/sbin/getty --autologin xedra --noclear 38400 tty1
 2:23:respawn:/sbin/getty 38400 tty2
 3:23:respawn:/sbin/getty 38400 tty3
 4:23:respawn:/sbin/getty 38400 tty4

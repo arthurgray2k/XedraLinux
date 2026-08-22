@@ -76,7 +76,7 @@ launch_vm() {
         --vcpus "${VCPUS}" \
         --osinfo debian12 \
         --cdrom "${ISO_PATH}" \
-        --boot uefi \
+        --boot uefi,bootmenu.enable=on \
         --disk none \
         --network network=default,model=virtio \
         --graphics spice \
