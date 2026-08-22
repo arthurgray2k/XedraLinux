@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Xedra Linux - Stage 7: Configure live-build for Xedra 0.1 ISO Generation
+# Xedra Linux - Stage 7: Configure live-build for Xedra 0.2 ISO Generation
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Purpose:
 #   Initializes and configures the Debian 'live-build' workspace under
 #   ~/XedraLinux/build/live-build with Xedra's exact specifications:
+#     - Reads central declarative configuration from config/xedra-build.conf
 #     - Base: Debian 13 "Trixie" (amd64)
 #     - Init System: SysVinit (sysvinit-core) via chroot hook
 #     - Desktop: X11 + Fluxbox + xterm + SPICE agent + xsetroot
-#     - Hardware/Input: udev + kmod + libinput
+#     - Hardware/Input: udev + kmod + libinput + xserver-xorg-legacy
 #     - Kernel: linux-image-amd64 + live-boot
 #     - Bootloader: Hybrid UEFI + BIOS (GRUB + Syslinux)
 # ==============================================================================
@@ -29,13 +30,68 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 LB_DIR="${REPO_ROOT}/build/live-build"
 CONFIG_DIR="${REPO_ROOT}/config"
+CONFIG_FILE="${CONFIG_DIR}/xedra-build.conf"
+
+# Load default values from config/xedra-build.conf if present
+if [[ -f "${CONFIG_FILE}" ]]; then
+    # shellcheck source=/dev/null
+    source "${CONFIG_FILE}"
+else
+    DISTRO_NAME="Xedra Linux"
+    DISTRO_VERSION="0.2"
+    DISTRO_CODENAME="genesis"
+    ISO_VOLUME="XEDRA_0_2"
+    ISO_APPLICATION="Xedra Linux 0.2"
+    ISO_PUBLISHER="Xedra Linux Project"
+    BUILD_PROFILE="dev"
+    CACHE_PACKAGES=true
+    PURGE_ON_CLEAN=false
+    DEBIAN_DISTRIBUTION="trixie"
+    DEBIAN_ARCH="amd64"
+    DEBIAN_ARCHIVE_AREAS="main contrib non-free non-free-firmware"
+    DEBIAN_MIRROR_BOOTSTRAP="https://deb.debian.org/debian"
+    DEBIAN_MIRROR_BINARY="https://deb.debian.org/debian"
+    LIVE_HOSTNAME="xedra"
+    LIVE_USERNAME="xedra"
+    LIVE_USER_GROUPS="sudo,audio,video,cdrom,plugdev,kvm,input,tty"
+    LIVE_AUTOLOGIN=true
+fi
+
+# Parse CLI override flags
+for arg in "$@"; do
+    case "${arg}" in
+        --profile=dev)
+            BUILD_PROFILE="dev"
+            CACHE_PACKAGES=true
+            PURGE_ON_CLEAN=false
+            ;;
+        --profile=release)
+            BUILD_PROFILE="release"
+            CACHE_PACKAGES=false
+            PURGE_ON_CLEAN=true
+            ;;
+        --purge)
+            PURGE_ON_CLEAN=true
+            ;;
+        --no-cache)
+            CACHE_PACKAGES=false
+            ;;
+        --cache)
+            CACHE_PACKAGES=true
+            PURGE_ON_CLEAN=false
+            ;;
+    esac
+done
 
 print_header() {
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}  Xedra Linux - Configure live-build Environment       ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
-    echo "Live-Build Workspace: ${LB_DIR}"
-    echo "Distribution Base:    Debian 13 (Trixie) amd64"
+    echo "Distribution:         ${DISTRO_NAME} ${DISTRO_VERSION} (${DISTRO_CODENAME})"
+    echo "Build Profile:        ${BUILD_PROFILE}"
+    echo "Package Caching:      ${CACHE_PACKAGES}"
+    echo "Purge on Clean:       ${PURGE_ON_CLEAN}"
+    echo "Workspace:            ${LB_DIR}"
     echo "Init System:          SysVinit (PID 1)"
     echo "Desktop:              Fluxbox + xterm + SPICE"
     echo ""
@@ -54,36 +110,48 @@ prepare_workspace() {
     mkdir -p "${LB_DIR}"
     cd "${LB_DIR}"
 
-    # Clean intermediate build stages but PRESERVE local package cache (cache/)
+    # Clean intermediate build stages according to caching policy
     if [[ -d "${LB_DIR}/config" ]]; then
-        echo "Cleaning previous live-build state (preserving package cache)..."
-        lb clean --binary --chroot 2>/dev/null || true
+        if [[ "${PURGE_ON_CLEAN}" == "true" ]]; then
+            echo "Purging previous live-build config, chroot, and download cache..."
+            lb clean --purge 2>/dev/null || true
+        else
+            echo "Cleaning previous live-build state (preserving local package cache)..."
+            lb clean --binary --chroot 2>/dev/null || true
+        fi
     fi
 
-    # Run lb config with explicit package caching enabled
-    echo "Executing 'lb config'..."
+    local cache_flag="false"
+    local cache_packages_flag="false"
+    if [[ "${CACHE_PACKAGES}" == "true" ]]; then
+        cache_flag="true"
+        cache_packages_flag="true"
+    fi
+
+    # Run lb config with explicit parameters
+    echo "Executing 'lb config' (Profile: ${BUILD_PROFILE})..."
     lb config \
-        --distribution trixie \
-        --architectures amd64 \
+        --distribution "${DEBIAN_DISTRIBUTION}" \
+        --architectures "${DEBIAN_ARCH}" \
         --binary-images iso-hybrid \
         --bootloader grub-efi \
-        --archive-areas "main contrib non-free non-free-firmware" \
-        --mirror-bootstrap "https://deb.debian.org/debian" \
-        --mirror-binary "https://deb.debian.org/debian" \
+        --archive-areas "${DEBIAN_ARCHIVE_AREAS}" \
+        --mirror-bootstrap "${DEBIAN_MIRROR_BOOTSTRAP}" \
+        --mirror-binary "${DEBIAN_MIRROR_BINARY}" \
         --linux-packages "linux-image" \
-        --linux-flavours "amd64" \
-        --iso-application "Xedra Linux 0.2" \
-        --iso-publisher "Xedra Linux Project" \
-        --iso-volume "XEDRA_0_2" \
+        --linux-flavours "${DEBIAN_ARCH}" \
+        --iso-application "${ISO_APPLICATION}" \
+        --iso-publisher "${ISO_PUBLISHER}" \
+        --iso-volume "${ISO_VOLUME}" \
         --system live \
-        --cache true \
-        --cache-packages true \
+        --cache "${cache_flag}" \
+        --cache-packages "${cache_packages_flag}" \
         --cache-stages "bootstrap chroot" \
-        --bootappend-live "boot=live components hostname=xedra username=xedra quiet" \
+        --bootappend-live "boot=live components hostname=${LIVE_HOSTNAME} username=${LIVE_USERNAME} quiet" \
         --apt-recommends false \
         --verbose
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated (persistent cache enabled)"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated"
     echo ""
 }
 
@@ -91,9 +159,9 @@ configure_xedra_packages() {
     echo -e "${COLOR_BOLD}--- 2. Configuring Xedra Package Lists ---${COLOR_RESET}"
     mkdir -p "${LB_DIR}/config/package-lists"
 
-    # Complete Xedra 0.1 Package List
+    # Complete Xedra Core Package List
     cat << 'EOF' > "${LB_DIR}/config/package-lists/xedra.list.chroot"
-# Xedra 0.1 Core Package List
+# Xedra Core Package List
 
 # 1. Linux Kernel & Hardware Device Subsystem
 linux-image-amd64
@@ -250,15 +318,15 @@ XWRAP_EOF
         echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Fluxbox menu overlay added"
     fi
 
-    # Install custom Xedra 0.2 branding and ASCII issue banner
-    cat << 'ISSUE_EOF' > "${LB_DIR}/config/includes.chroot/etc/issue"
+    # Install custom Xedra branding and ASCII issue banner
+    cat << ISSUE_EOF > "${LB_DIR}/config/includes.chroot/etc/issue"
  __  __          _           _     _                  
  \ \/ /___  __| |_ __ __ _  | |   (_)_ __  _   ___  __
   \  // _ \/ _` | '__/ _` | | |   | | '_ \| | | \ \/ /
   /  \  __/ (_| | | | (_| | | |___| | | | | |_| |>  < 
  /_/\_\___|\__,_|_|  \__,_| |_____|_|_| |_|\__,_/_/\_\
 
- Xedra Linux 0.2 (amd64) — Genesis
+ ${DISTRO_NAME} ${DISTRO_VERSION} (${DEBIAN_ARCH}) — ${DISTRO_CODENAME^}
  Kernel \r on an \m (\l)
 
 ISSUE_EOF
@@ -266,14 +334,14 @@ ISSUE_EOF
     cp "${LB_DIR}/config/includes.chroot/etc/issue" "${LB_DIR}/config/includes.chroot/etc/issue.net"
 
     # Install custom Xedra /etc/os-release
-    cat << 'OS_EOF' > "${LB_DIR}/config/includes.chroot/etc/os-release"
-NAME="Xedra Linux"
-PRETTY_NAME="Xedra Linux 0.2 (Genesis)"
+    cat << OS_EOF > "${LB_DIR}/config/includes.chroot/etc/os-release"
+NAME="${DISTRO_NAME}"
+PRETTY_NAME="${DISTRO_NAME} ${DISTRO_VERSION} (${DISTRO_CODENAME^})"
 ID=xedra
 ID_LIKE=debian
-VERSION="0.2"
-VERSION_ID="0.2"
-VERSION_CODENAME=genesis
+VERSION="${DISTRO_VERSION}"
+VERSION_ID="${DISTRO_VERSION}"
+VERSION_CODENAME=${DISTRO_CODENAME}
 HOME_URL="https://github.com/arthurgray2k/XedraLinux"
 SUPPORT_URL="https://github.com/arthurgray2k/XedraLinux/issues"
 BUG_REPORT_URL="https://github.com/arthurgray2k/XedraLinux/issues"
@@ -281,11 +349,11 @@ OS_EOF
 
     # Configure auto-login for live session
     mkdir -p "${LB_DIR}/config/includes.chroot/etc/live/config.conf.d"
-    cat << 'EOF' > "${LB_DIR}/config/includes.chroot/etc/live/config.conf.d/xedra.conf"
-LIVE_HOSTNAME="xedra"
-LIVE_USERNAME="xedra"
-LIVE_USER_DEFAULT_GROUPS="sudo,audio,video,cdrom,plugdev,kvm,input"
-LIVE_CONFIG_NOAUTOLOGIN="false"
+    cat << EOF > "${LB_DIR}/config/includes.chroot/etc/live/config.conf.d/xedra.conf"
+LIVE_HOSTNAME="${LIVE_HOSTNAME}"
+LIVE_USERNAME="${LIVE_USERNAME}"
+LIVE_USER_DEFAULT_GROUPS="${LIVE_USER_GROUPS}"
+LIVE_CONFIG_NOAUTOLOGIN="$([[ "${LIVE_AUTOLOGIN}" == "true" ]] && echo "false" || echo "true")"
 EOF
 
     echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Xedra branding, ASCII issue banner, and live hooks added"
@@ -302,7 +370,7 @@ verify_configuration() {
     echo -e "${COLOR_BOLD}${COLOR_GREEN}  live-build Workspace Successfully Configured!        ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
     echo ""
-    echo "Next Step: Compile the bootable Xedra 0.1 ISO using:"
+    echo "Next Step: Compile the bootable ISO using:"
     echo "  sudo ./scripts/build-iso.sh"
     echo ""
 }

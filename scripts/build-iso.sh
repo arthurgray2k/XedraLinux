@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Xedra Linux - Stage 8: Build Bootable Xedra 0.1 Live ISO
+# Xedra Linux - Stage 8: Build Bootable Xedra 0.2 Live ISO
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Purpose:
-#   Compiles the complete bootable Xedra 0.1 ISO image using Debian live-build
-#   inside the 'xedra-builder' VM, and outputs the result to output/xedra-0.1-amd64.iso.
+#   Compiles the complete bootable Xedra 0.2 ISO image using Debian live-build
+#   inside the 'xedra-builder' VM, and outputs the result to output/xedra-0.2-amd64.iso.
+#
+# Usage:
+#   sudo ./scripts/build-iso.sh                    # Default: Fast dev cached build
+#   sudo ./scripts/build-iso.sh --profile=dev      # Explicit dev profile
+#   sudo ./scripts/build-iso.sh --profile=release  # Release profile (purge & full clean)
+#   sudo ./scripts/build-iso.sh --purge            # Force purge cache
 #
 # Output Artifacts:
-#   - output/xedra-0.1-amd64.iso
-#   - output/xedra-0.1-amd64.iso.sha256
+#   - output/xedra-0.2-amd64.iso
+#   - output/xedra-0.2-amd64.iso.sha256
 # ==============================================================================
 
 set -euo pipefail
@@ -55,15 +61,14 @@ verify_environment() {
 
 setup_and_configure() {
     echo -e "${COLOR_BOLD}--- 1. Generating Fresh live-build Configuration ---${COLOR_RESET}"
-    # Invoke configure-live-build.sh to cleanly wipe old chroot, run lb config, and stage overlays
-    "${SCRIPT_DIR}/configure-live-build.sh"
+    # Invoke configure-live-build.sh with CLI arguments (e.g. --profile=dev or --profile=release)
+    "${SCRIPT_DIR}/configure-live-build.sh" "$@"
     echo ""
 }
 
 compile_iso() {
     echo -e "${COLOR_BOLD}--- 2. Executing 'lb build' ---${COLOR_RESET}"
     echo "Compiling live rootfs, kernel, squashfs, bootloaders, and hybrid ISO..."
-    echo "This may take 3–7 minutes depending on network and CPU speed."
     echo ""
 
     cd "${LB_DIR}"
@@ -118,7 +123,7 @@ verify_iso() {
     echo ""
 
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
-    echo -e "${COLOR_BOLD}${COLOR_GREEN}  Xedra 0.1 ISO Successfully Built!                   ${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}${COLOR_GREEN}  Xedra 0.2 ISO Successfully Built!                   ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
     echo ""
     echo "Next Stage (Stage 9): Test the bootable ISO in the 'xedra-lab' VM!"
@@ -128,7 +133,7 @@ verify_iso() {
 main() {
     print_header
     verify_environment
-    setup_and_configure
+    setup_and_configure "$@"
     compile_iso
     package_artifacts
     verify_iso
