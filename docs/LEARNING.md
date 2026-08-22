@@ -98,3 +98,27 @@ This document tracks technical insights, practical lessons, encountered challeng
    - Debian automatically registered `startfluxbox` as the system's default `x-window-manager`.
 3. **Skeleton Configuration**:
    - Placing `.xinitrc` and `.fluxbox/menu` in `/etc/skel/` ensures every new user inherits the minimal Xedra desktop environment.
+
+---
+
+## Stage 7 - Debian Live-Build Configuration
+
+- **Status**: `Verified & Complete`
+- **Focus**: Configuring `live-build` with Xedra's package list, APT exclusion, and chroot hooks.
+
+### What Was Learned:
+1. **Live-Build Chroot Hooks**:
+   - Rather than relying on fragile solver priority pinning that can break virtual package candidates, `live-build` chroot hooks (`config/hooks/normal/*.hook.chroot`) provide a clean mechanism to execute atomic transitions inside the rootfs during build time.
+
+---
+
+## Stage 8 - ISO Creation & Packaging
+
+- **Status**: `Verified & Complete`
+- **Focus**: Compiling the standalone `xedra-0.1-amd64.iso` image.
+
+### What Was Learned:
+1. **Temporary Staging in Live-Build**:
+   - `live-build` temporarily installs bootloader packages (`grub-efi-amd64-signed`, `shim-signed`, `mtools`) to assemble the UEFI partition, then purges them before `mksquashfs` compression to prevent ISO bloat.
+2. **Hybrid ISO Generation**:
+   - `xorriso` packages the kernel, squashfs, and EFI System Partition into a single hybrid ISO (948 MB) bootable across both legacy BIOS and modern UEFI platforms.
