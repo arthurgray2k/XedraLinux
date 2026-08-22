@@ -67,4 +67,20 @@ This document tracks technical insights, practical lessons, encountered challeng
 2. **Merged-/usr Layout**:
    - In modern Debian 13 (Trixie), `/bin`, `/sbin`, and `/lib` are symbolic links pointing into `/usr/bin`, `/usr/sbin`, and `/usr/lib`.
 3. **Upstream Init Baseline**:
-   - Default debootstrap installs 146 base packages with `systemd-sysv` providing `/sbin/init`. In Stage 5, we transition this baseline to SysVinit (`sysvinit-core`).
+   - Default debootstrap installs 146 base packages with `systemd-sysv` providing `/sbin/init`.
+
+---
+
+## Stage 5 - Xedra Package Selection & SysVinit Transition
+
+- **Status**: `Verified & Complete`
+- **Focus**: Replacing `systemd-sysv` with SysVinit (`sysvinit-core`) as PID 1 inside the target rootfs.
+
+### What Was Learned:
+1. **APT Atomic Package Replacement (`systemd-sysv-`)**:
+   - When substituting essential system components, APT requires explicit syntax to resolve conflicting package decisions.
+   - Appending a minus sign (`pkg-`) instructs APT to remove the conflicting package in the exact same transaction as installing its replacement.
+2. **PID 1 Transition**:
+   - `/sbin/init` was transitioned from a symlink to systemd into a direct SysVinit executable binary (~53 KB).
+3. **Inittab Runlevels**:
+   - SysVinit uses `/etc/inittab` to orchestrate system runlevels (default runlevel 2 for multi-user mode, `rcS` for boot scripts, and gettys on `tty1`–`tty6`).
