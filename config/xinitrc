@@ -1,0 +1,10 @@
+#!/bin/sh
+# Xedra Linux - Default X11 Session Starter (.xinitrc)
+
+# Load X resources if present
+if [ -f "$HOME/.Xresources" ]; then
+    xrdb -merge "$HOME/.Xresources"
+fi
+
+# Launch window manager
+exec fluxbox
