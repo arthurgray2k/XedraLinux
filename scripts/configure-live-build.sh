@@ -114,11 +114,7 @@ xterm
 spice-vdagent
 dbus-x11
 
-# 3. Session & Power Management (SysVinit-compatible)
-elogind
-libpam-elogind
-
-# 4. Networking & System Utilities
+# 3. Networking & System Utilities
 iproute2
 iputils-ping
 dhcpcd-base
@@ -147,7 +143,7 @@ configure_sysvinit_hook() {
     cat << 'EOF' > "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
 #!/bin/sh
 set -e
-echo "=== [XEDRA HOOK] Transitioning chroot to SysVinit PID 1 ==="
+echo "=== [XEDRA HOOK] Transitioning chroot to SysVinit PID 1 & elogind ==="
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
@@ -158,6 +154,8 @@ apt-get install -y --no-install-recommends \
     orphan-sysvinit-scripts \
     live-config-sysvinit \
     systemd-sysv- \
+    elogind \
+    libpam-elogind \
     --allow-remove-essential
 
 echo "=== [XEDRA HOOK] Setting default users and passwords ==="
