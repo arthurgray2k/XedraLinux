@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "distro": {
+    "name": "Xedra Linux",
+    "version": "0.2",
+    "codename": "genesis",
+    "init_system": "sysvinit",
+    "iso_application": "Xedra Linux 0.2",
+    "iso_publisher": "Xedra Linux Project",
+    "iso_volume": "XEDRA_0_2"
+  },
+  "debian_base": {
+    "distribution": "trixie",
+    "architecture": "amd64",
+    "archive_areas": "main contrib non-free non-free-firmware",
+    "mirror_bootstrap": "https://deb.debian.org/debian",
+    "mirror_binary": "https://deb.debian.org/debian"
+  },
+  "default_profile": "dev",
+  "profiles": {
+    "dev": {
+      "description": "Fast iterative development profile with persistent local package caching",
+      "cache_packages": true,
+      "purge_on_clean": false,
+      "squashfs_compression": "gzip",
+      "apt_recommends": false
+    },
+    "release": {
+      "description": "Pristine official production release build with fresh upstream downloads and high compression",
+      "cache_packages": false,
+      "purge_on_clean": true,
+      "squashfs_compression": "xz",
+      "apt_recommends": false
+    },
+    "minimal": {
+      "description": "Minimal text-only headless rescue edition",
+      "cache_packages": true,
+      "purge_on_clean": false,
+      "squashfs_compression": "gzip",
+      "apt_recommends": false
+    }
+  },
+  "live_session": {
+    "hostname": "xedra",
+    "username": "xedra",
+    "user_groups": "sudo,audio,video,cdrom,plugdev,kvm,input,tty",
+    "autologin": true
+  }
+}

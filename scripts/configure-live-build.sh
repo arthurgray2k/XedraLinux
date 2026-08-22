@@ -7,7 +7,7 @@
 # Purpose:
 #   Initializes and configures the Debian 'live-build' workspace under
 #   ~/XedraLinux/build/live-build with Xedra's exact specifications:
-#     - Reads central declarative configuration from config/xedra-build.conf
+#     - Reads multi-profile declarative JSON manifest from config/xedra-build.json
 #     - Base: Debian 13 "Trixie" (amd64)
 #     - Init System: SysVinit (sysvinit-core) via chroot hook
 #     - Desktop: X11 + Fluxbox + xterm + SPICE agent + xsetroot
@@ -30,65 +30,74 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 LB_DIR="${REPO_ROOT}/build/live-build"
 CONFIG_DIR="${REPO_ROOT}/config"
-CONFIG_FILE="${CONFIG_DIR}/xedra-build.conf"
+JSON_CONFIG="${CONFIG_DIR}/xedra-build.json"
 
-# Load default values from config/xedra-build.conf if present
-if [[ -f "${CONFIG_FILE}" ]]; then
-    # shellcheck source=/dev/null
-    source "${CONFIG_FILE}"
-else
-    DISTRO_NAME="Xedra Linux"
-    DISTRO_VERSION="0.2"
-    DISTRO_CODENAME="genesis"
-    ISO_VOLUME="XEDRA_0_2"
-    ISO_APPLICATION="Xedra Linux 0.2"
-    ISO_PUBLISHER="Xedra Linux Project"
-    BUILD_PROFILE="dev"
-    CACHE_PACKAGES=true
-    PURGE_ON_CLEAN=false
-    DEBIAN_DISTRIBUTION="trixie"
-    DEBIAN_ARCH="amd64"
-    DEBIAN_ARCHIVE_AREAS="main contrib non-free non-free-firmware"
-    DEBIAN_MIRROR_BOOTSTRAP="https://deb.debian.org/debian"
-    DEBIAN_MIRROR_BINARY="https://deb.debian.org/debian"
-    LIVE_HOSTNAME="xedra"
-    LIVE_USERNAME="xedra"
-    LIVE_USER_GROUPS="sudo,audio,video,cdrom,plugdev,kvm,input,tty"
-    LIVE_AUTOLOGIN=true
-fi
-
-# Parse CLI override flags
+# Determine target build profile from arguments
+BUILD_PROFILE="dev"
 for arg in "$@"; do
     case "${arg}" in
-        --profile=dev)
-            BUILD_PROFILE="dev"
-            CACHE_PACKAGES=true
-            PURGE_ON_CLEAN=false
-            ;;
-        --profile=release)
-            BUILD_PROFILE="release"
-            CACHE_PACKAGES=false
-            PURGE_ON_CLEAN=true
+        --profile=*)
+            BUILD_PROFILE="${arg#*=}"
             ;;
         --purge)
-            PURGE_ON_CLEAN=true
-            ;;
-        --no-cache)
-            CACHE_PACKAGES=false
-            ;;
-        --cache)
-            CACHE_PACKAGES=true
-            PURGE_ON_CLEAN=false
+            BUILD_PROFILE="release"
             ;;
     esac
 done
+
+# Default variables
+DISTRO_NAME="Xedra Linux"
+DISTRO_VERSION="0.2"
+DISTRO_CODENAME="genesis"
+ISO_VOLUME="XEDRA_0_2"
+ISO_APPLICATION="Xedra Linux 0.2"
+ISO_PUBLISHER="Xedra Linux Project"
+CACHE_PACKAGES=true
+PURGE_ON_CLEAN=false
+DEBIAN_DISTRIBUTION="trixie"
+DEBIAN_ARCH="amd64"
+DEBIAN_ARCHIVE_AREAS="main contrib non-free non-free-firmware"
+DEBIAN_MIRROR_BOOTSTRAP="https://deb.debian.org/debian"
+DEBIAN_MIRROR_BINARY="https://deb.debian.org/debian"
+LIVE_HOSTNAME="xedra"
+LIVE_USERNAME="xedra"
+LIVE_USER_GROUPS="sudo,audio,video,cdrom,plugdev,kvm,input,tty"
+LIVE_AUTOLOGIN=true
+
+# Parse JSON manifest if present
+if [[ -f "${JSON_CONFIG}" ]] && command -v python3 >/dev/null 2>&1; then
+    eval "$(python3 -c "
+import json
+with open('${JSON_CONFIG}') as f:
+    d = json.load(f)
+p = d.get('profiles', {}).get('${BUILD_PROFILE}', d.get('profiles', {}).get('dev', {}))
+print(f'DISTRO_NAME=\"{d.get(\"distro\", {}).get(\"name\", \"Xedra Linux\")}\"')
+print(f'DISTRO_VERSION=\"{d.get(\"distro\", {}).get(\"version\", \"0.2\")}\"')
+print(f'DISTRO_CODENAME=\"{d.get(\"distro\", {}).get(\"codename\", \"genesis\")}\"')
+print(f'ISO_VOLUME=\"{d.get(\"distro\", {}).get(\"iso_volume\", \"XEDRA_0_2\")}\"')
+print(f'ISO_APPLICATION=\"{d.get(\"distro\", {}).get(\"iso_application\", \"Xedra Linux 0.2\")}\"')
+print(f'ISO_PUBLISHER=\"{d.get(\"distro\", {}).get(\"iso_publisher\", \"Xedra Linux Project\")}\"')
+print(f'DEBIAN_DISTRIBUTION=\"{d.get(\"debian_base\", {}).get(\"distribution\", \"trixie\")}\"')
+print(f'DEBIAN_ARCH=\"{d.get(\"debian_base\", {}).get(\"architecture\", \"amd64\")}\"')
+print(f'DEBIAN_ARCHIVE_AREAS=\"{d.get(\"debian_base\", {}).get(\"archive_areas\", \"main contrib non-free non-free-firmware\")}\"')
+print(f'DEBIAN_MIRROR_BOOTSTRAP=\"{d.get(\"debian_base\", {}).get(\"mirror_bootstrap\", \"https://deb.debian.org/debian\")}\"')
+print(f'DEBIAN_MIRROR_BINARY=\"{d.get(\"debian_base\", {}).get(\"mirror_binary\", \"https://deb.debian.org/debian\")}\"')
+print(f'CACHE_PACKAGES={str(p.get(\"cache_packages\", True)).lower()}')
+print(f'PURGE_ON_CLEAN={str(p.get(\"purge_on_clean\", False)).lower()}')
+print(f'LIVE_HOSTNAME=\"{d.get(\"live_session\", {}).get(\"hostname\", \"xedra\")}\"')
+print(f'LIVE_USERNAME=\"{d.get(\"live_session\", {}).get(\"username\", \"xedra\")}\"')
+print(f'LIVE_USER_GROUPS=\"{d.get(\"live_session\", {}).get(\"user_groups\", \"sudo,audio,video,cdrom,plugdev,kvm,input,tty\")}\"')
+print(f'LIVE_AUTOLOGIN={str(d.get(\"live_session\", {}).get(\"autologin\", True)).lower()}')
+")"
+fi
 
 print_header() {
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}  Xedra Linux - Configure live-build Environment       ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
+    echo "Manifest File:        ${JSON_CONFIG}"
     echo "Distribution:         ${DISTRO_NAME} ${DISTRO_VERSION} (${DISTRO_CODENAME})"
-    echo "Build Profile:        ${BUILD_PROFILE}"
+    echo "Active Profile:       ${BUILD_PROFILE}"
     echo "Package Caching:      ${CACHE_PACKAGES}"
     echo "Purge on Clean:       ${PURGE_ON_CLEAN}"
     echo "Workspace:            ${LB_DIR}"
@@ -110,13 +119,13 @@ prepare_workspace() {
     mkdir -p "${LB_DIR}"
     cd "${LB_DIR}"
 
-    # Clean intermediate build stages according to caching policy
+    # Clean intermediate build stages according to profile caching policy
     if [[ -d "${LB_DIR}/config" ]]; then
         if [[ "${PURGE_ON_CLEAN}" == "true" ]]; then
-            echo "Purging previous live-build config, chroot, and download cache..."
+            echo "Purging previous live-build config, chroot, and download cache (Profile: ${BUILD_PROFILE})..."
             lb clean --purge 2>/dev/null || true
         else
-            echo "Cleaning previous live-build state (preserving local package cache)..."
+            echo "Cleaning previous live-build state (preserving local package cache for profile: ${BUILD_PROFILE})..."
             lb clean --binary --chroot 2>/dev/null || true
         fi
     fi
@@ -371,7 +380,7 @@ verify_configuration() {
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
     echo ""
     echo "Next Step: Compile the bootable ISO using:"
-    echo "  sudo ./scripts/build-iso.sh"
+    echo "  sudo ./scripts/build-iso.sh --profile=${BUILD_PROFILE}"
     echo ""
 }
 
