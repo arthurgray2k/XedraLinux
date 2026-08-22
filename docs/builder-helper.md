@@ -1,0 +1,107 @@
+# Xedra Linux - Builder Quick Reference & Helper Guide
+
+A consolidated cheat sheet for building, testing, configuring, and troubleshooting Xedra Linux across the 3 core environments.
+
+---
+
+## 1. Fast Iteration Loop (3-Step Cheat Sheet)
+
+```text
+ [ xedra-builder VM ]              [ Linux Host ]                     [ xedra-lab VM ]
+  (Compiles ISO)                (Transfers Artifact)                  (Boots & Tests)
+        │                                │                                   │
+  sudo ./build-iso.sh  ──────►  scp builder@192.168.122.180:... ──►  ./create-lab-vm.sh
+```
+
+### Step 1: Build the ISO (Inside `xedra-builder` VM)
+```bash
+# Connect to builder VM
+ssh builder@192.168.122.180
+
+# Build Xedra 0.2 ISO with dev cache (~1–2 minutes)
+cd ~/XedraLinux
+git pull
+sudo ./scripts/build-iso.sh --profile=dev
+```
+
+### Step 2: Transfer the ISO (On Linux Host Terminal)
+```bash
+cd ~/XedraLinux
+git pull
+scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.2-amd64.iso* output/
+```
+
+### Step 3: Launch Test VM (On Linux Host Terminal)
+```bash
+./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.2-amd64.iso
+virt-manager &
+```
+
+---
+
+## 2. Environments & Credentials Reference
+
+| Environment | Hostname / IP | Default User | Default Password | Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **Development Host** | Physical Host | `mint` / your user | your sudo password | Manages Git, QEMU/KVM hypervisor, and libvirt VMs |
+| **Builder VM** | `xedra-builder`<br>`192.168.122.180` | `builder`<br>`root` | `builder`<br>`root` | Compiles Debian rootfs, packages, and UEFI ISOs |
+| **Live Test Target** | `xedra-lab`<br>*(Ephemeral)* | `xedra`<br>`root` | `xedra`<br>`root` *(passwordless sudo)* | Boots and runs the live Xedra ISO in RAM |
+
+---
+
+## 3. Build Profiles Reference (`config/xedra-build.json`)
+
+| Command | Profile | Caching | Purge | Best Used For |
+| :--- | :--- | :--- | :--- | :--- |
+| `sudo ./scripts/build-iso.sh` | `dev` | **Enabled** | **No** | Rapid everyday iteration (~1–2 min build) |
+| `sudo ./scripts/build-iso.sh --profile=dev` | `dev` | **Enabled** | **No** | Explicit dev profile invocation |
+| `sudo ./scripts/build-iso.sh --profile=release` | `release` | Disabled | **Yes** | Official pristine releases (fetches fresh upstream packages) |
+| `sudo ./scripts/build-iso.sh --profile=minimal` | `minimal` | **Enabled** | **No** | Headless text-only server edition |
+
+---
+
+## 4. Configuration & Customization Map
+
+| Customization Area | File Path | Purpose |
+| :--- | :--- | :--- |
+| **Build Manifest & Profiles** | [`config/xedra-build.json`](file:///home/mint/XedraLinux/config/xedra-build.json) | Central versioning, profile definitions, mirrors, and user settings |
+| **SysVinit / Runlevels** | [`config/inittab`](file:///home/mint/XedraLinux/config/inittab) | PID 1 init configuration, runlevel 2, autologin on `tty1` |
+| **Desktop Startup & Styling** | [`config/xinitrc`](file:///home/mint/XedraLinux/config/xinitrc) | X11 wallpaper (`xsetroot`), SPICE agent, terminal launch, Fluxbox start |
+| **Fluxbox Application Menu** | [`config/fluxbox/menu`](file:///home/mint/XedraLinux/config/fluxbox/menu) | Right-click desktop menu items, shortcuts, and commands |
+| **ISO Assembly Script** | [`scripts/build-iso.sh`](file:///home/mint/XedraLinux/scripts/build-iso.sh) | Orchestrates workspace generation, `lb build`, and ISO output |
+| **Chroot Transition Hook** | [`scripts/configure-live-build.sh`](file:///home/mint/XedraLinux/scripts/configure-live-build.sh) | In-chroot SysVinit + `elogind` atomic transition and user creation |
+
+---
+
+## 5. VM Lifecycle Operations (Run on Linux Host)
+
+### Builder VM (`xedra-builder`)
+```bash
+# Check status and IP address
+./scripts/vm/inspect-builder-vm.sh
+
+# Start builder VM
+./scripts/vm/start-builder-vm.sh
+
+# Graceful shutdown
+./scripts/vm/stop-builder-vm.sh
+```
+
+### Lab Test VM (`xedra-lab`)
+```bash
+# Create and launch fresh test VM
+./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.2-amd64.iso
+
+# Destroy test VM
+./scripts/vm/destroy-lab-vm.sh
+```
+
+---
+
+## 6. Documentation & Architecture Index
+
+- **SysVinit Deep Dive**: [`docs/concepts/sysvinit-architecture-and-boot-lifecycle.md`](file:///home/mint/XedraLinux/docs/concepts/sysvinit-architecture-and-boot-lifecycle.md)
+- **Deployment & Installation Model**: [`docs/concepts/installation-and-deployment-model.md`](file:///home/mint/XedraLinux/docs/concepts/installation-and-deployment-model.md)
+- **APT vs DPKG & apt-get Guide**: [`docs/concepts/apt-vs-dpkg.md`](file:///home/mint/XedraLinux/docs/concepts/apt-vs-dpkg.md)
+- **Architecture Decisions (ADRs 1–9)**: [`docs/decisions/xedra-architecture.md`](file:///home/mint/XedraLinux/docs/decisions/xedra-architecture.md)
+- **Step-by-Step Runbooks**: [`docs/runbooks/vm/`](file:///home/mint/XedraLinux/docs/runbooks/vm/)

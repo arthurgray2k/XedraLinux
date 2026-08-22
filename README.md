@@ -57,6 +57,13 @@ Linux Host (Physical Workstation)
 
 ---
 
+## Quick Reference & Helper Guide
+
+For an all-in-one cheat sheet with commands, VM IPs, credentials, and build profiles, see:
+👉 **[Builder Helper Guide](docs/builder-helper.md)**
+
+---
+
 ## Quick Start
 
 ### 1. Validate Host Virtualization
