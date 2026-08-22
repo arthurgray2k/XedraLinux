@@ -216,9 +216,9 @@ configure_xedra_packages() {
     echo -e "${COLOR_BOLD}--- 2. Configuring Xedra Package Lists ---${COLOR_RESET}"
     mkdir -p "${LB_DIR}/config/package-lists"
 
-    # Core Package List for All Profiles (Kernel, Languages, Editors, Installer, CLI Tools, SysVinit)
+    # Core Package List for All Profiles (Kernel, Languages, Editors, Installer, CLI Tools)
     cat << 'EOF' > "${LB_DIR}/config/package-lists/xedra.list.chroot"
-# Xedra 0.4 Core Package List
+# Xedra 0.4.1 Core Package List
 
 # 1. Linux Kernel & Hardware Device Subsystem
 linux-image-amd64
@@ -227,16 +227,7 @@ live-config
 udev
 kmod
 
-# 2. SysVinit PID 1 Architecture & Session Subsystem (Pre-cached locally)
-sysvinit-core
-initscripts
-insserv
-orphan-sysvinit-scripts
-live-config-sysvinit
-elogind
-libpam-elogind
-
-# 3. Languages, Toolchains & Editors
+# 2. Languages, Toolchains & Editors
 python3
 python3-pip
 python3-venv
@@ -245,7 +236,7 @@ micro
 nano
 vim-tiny
 
-# 4. Native Disk Installer & Filesystem Utilities
+# 3. Native Disk Installer & Filesystem Utilities
 dialog
 parted
 dosfstools
@@ -254,7 +245,7 @@ rsync
 grub-efi-amd64-bin
 grub-pc-bin
 
-# 5. Networking & System Utilities
+# 4. Networking & System Utilities
 iproute2
 iputils-ping
 dhcpcd-base
@@ -267,11 +258,11 @@ procps
 sudo
 EOF
 
-    # 6. Display Server, Window Manager & Input Drivers (GUI Profiles Only)
+    # 5. Display Server, Window Manager & Input Drivers (GUI Profiles Only)
     if [[ "${BUILD_PROFILE}" != "minimal" ]]; then
         cat << 'EOF' >> "${LB_DIR}/config/package-lists/xedra.list.chroot"
 
-# 6. Graphical Desktop Environment (Fluxbox + X11 + SPICE)
+# 5. Graphical Desktop Environment (Fluxbox + X11 + SPICE)
 xserver-xorg-core
 xserver-xorg-legacy
 xserver-xorg-video-all
@@ -303,11 +294,20 @@ configure_sysvinit_hook() {
     cat << EOF > "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
 #!/bin/sh
 set -e
-echo "=== [XEDRA HOOK] Finalizing SysVinit PID 1 transition & user configuration ==="
+echo "=== [XEDRA HOOK] Transitioning chroot to SysVinit PID 1 & elogind ==="
 export DEBIAN_FRONTEND=noninteractive
 
-# Ensure systemd-sysv is purged in favor of sysvinit-core
-apt-get purge -y --allow-remove-essential systemd-sysv 2>/dev/null || true
+apt-get update -o Acquire::Languages=none
+apt-get install -y --no-install-recommends \
+    sysvinit-core \
+    initscripts \
+    insserv \
+    orphan-sysvinit-scripts \
+    live-config-sysvinit \
+    systemd-sysv- \
+    elogind \
+    libpam-elogind \
+    --allow-remove-essential
 
 echo "=== [XEDRA HOOK] Setting default users and passwords ==="
 # Set root password to 'root'
