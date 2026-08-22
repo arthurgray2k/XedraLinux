@@ -45,21 +45,18 @@ verify_environment() {
         exit 1
     fi
 
-    if [[ ! -d "${LB_DIR}/config" ]]; then
-        echo -e "${COLOR_RED}Error: live-build configuration not found in '${LB_DIR}'.${COLOR_RESET}" >&2
-        echo "Please run Step 07 first: sudo ./scripts/configure-live-build.sh" >&2
+    if ! command -v lb >/dev/null 2>&1; then
+        echo -e "${COLOR_RED}Error: 'live-build' (lb) is not installed.${COLOR_RESET}" >&2
         exit 1
     fi
 
     mkdir -p "${OUTPUT_DIR}"
 }
 
-clean_workspace() {
-    echo -e "${COLOR_BOLD}--- 1. Cleaning Previous Chroot & Cache ---${COLOR_RESET}"
-    cd "${LB_DIR}"
-    echo "Running 'lb clean --purge' to wipe any previous failed chroot state..."
-    lb clean --purge 2>/dev/null || true
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Workspace cleaned"
+setup_and_configure() {
+    echo -e "${COLOR_BOLD}--- 1. Generating Fresh live-build Configuration ---${COLOR_RESET}"
+    # Invoke configure-live-build.sh to cleanly wipe old chroot, run lb config, and stage overlays
+    "${SCRIPT_DIR}/configure-live-build.sh"
     echo ""
 }
 
@@ -131,7 +128,7 @@ verify_iso() {
 main() {
     print_header
     verify_environment
-    clean_workspace
+    setup_and_configure
     compile_iso
     package_artifacts
     verify_iso
