@@ -6,7 +6,7 @@
 #
 # Purpose:
 #   Creates and launches an ephemeral, UEFI-enabled test virtual machine
-#   ('xedra-lab') attached to the compiled Xedra 0.1 Live ISO image
+#   ('xedra-lab') attached to the compiled Xedra 0.4.1 Live ISO image
 #   to test live boot, SysVinit PID 1, and the Fluxbox desktop.
 # ==============================================================================
 
