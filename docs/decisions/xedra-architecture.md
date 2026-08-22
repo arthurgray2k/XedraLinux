@@ -51,11 +51,11 @@ This document records the foundational technical decisions for Xedra Linux, expl
 ## 5. Build Environment Architecture: Dedicated Debian 13 VM (`xedra-builder`)
 
 - **Decision**: Use a dedicated Debian 13 (Trixie) virtual machine (`xedra-builder`) running on KVM/libvirt as the authoritative build environment for all Xedra distro engineering.
-- **Reason**: Distribution engineering tools (`debootstrap`, `live-build`, `losetup`, `mksquashfs`, `xorriso`, `grub-mkstandalone`) require uncompromised Linux kernel privileges (creating real device nodes, loopback devices, and mounting pseudo-filesystems). A dedicated builder VM provides full kernel capabilities safely without granting dangerous `--privileged` root access to containers on the physical Linux Mint host.
+- **Reason**: Distribution engineering tools (`debootstrap`, `live-build`, `losetup`, `mksquashfs`, `xorriso`, `grub-mkstandalone`) require uncompromised Linux kernel privileges (creating real device nodes, loopback devices, and mounting pseudo-filesystems). A dedicated builder VM provides full kernel capabilities safely without granting dangerous `--privileged` root access to containers on the physical host system.
 - **Alternatives Considered**:
   - *Rootless Podman Container*: Evaluated in Stage 2; hit kernel user-namespace limits (`mknod`, nested `mount`).
   - *Privileged Container on Host*: Weakens host security by disabling container isolation mechanisms.
-  - *Direct Build on Mint Host*: Pollutes host `/etc/apt/` and package database with cross-distro packages.
+  - *Direct Build on Host*: Pollutes host `/etc/apt/` and package database with cross-distro packages.
 - **Verdict**: **Dedicated Debian 13 VM (`xedra-builder`)** is the cleanest, most secure, and most standard approach.
 
 ---

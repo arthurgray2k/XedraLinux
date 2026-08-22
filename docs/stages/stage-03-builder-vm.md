@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-Create a dedicated, reproducible Debian 13 "Trixie" virtual machine (`xedra-builder`) on the Linux Mint host via libvirt/QEMU/KVM. This VM serves as the authoritative, uncompromised distribution engineering environment with full Linux kernel capabilities for `debootstrap`, `live-build`, loop mounts, and ISO assembly.
+Create a dedicated, reproducible Debian 13 "Trixie" virtual machine (`xedra-builder`) on the non-Debian Linux host via libvirt/QEMU/KVM. This VM serves as the authoritative, uncompromised distribution engineering environment with full Linux kernel capabilities for `debootstrap`, `live-build`, loop mounts, and ISO assembly.
 
 ---
 
@@ -11,7 +11,7 @@ Create a dedicated, reproducible Debian 13 "Trixie" virtual machine (`xedra-buil
 In **Stage 2**, we evaluated a rootless Podman container as the build environment. That experiment revealed:
 1. **User Namespace Restrictions**: Linux user namespaces (`CLONE_NEWUSER`) intentionally block unprivileged creation of block/character device nodes (`mknod`) and nested loop mounts.
 2. **Distro Tool Requirements**: Standard Debian tooling (`debootstrap`, `live-build`, `losetup`, `mksquashfs`) is designed to operate on a full Linux kernel with device node and loopback filesystem mounting capabilities.
-3. **Purity Without `--privileged`**: Rather than weakening container security on the host by passing `--privileged`, creating a dedicated Debian 13 VM provides 100% native kernel features in complete isolation from the physical Linux Mint host.
+3. **Purity Without `--privileged`**: Rather than weakening container security on the host by passing `--privileged`, creating a dedicated Debian 13 VM provides 100% native kernel features in complete isolation from the physical host system.
 
 ---
 

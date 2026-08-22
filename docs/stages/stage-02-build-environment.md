@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-Establish an isolated, clean Debian 13 "Trixie" build environment using Podman on the Linux Mint host. This ensures that all Xedra distribution construction tooling operates in pure Debian userland without contaminating the host system.
+Establish an isolated, clean Debian 13 "Trixie" build environment using Podman on the non-Debian Linux host. This ensures that all Xedra distribution construction tooling operates in pure Debian userland without contaminating the host system.
 
 ---
 
@@ -19,7 +19,7 @@ Establish an isolated, clean Debian 13 "Trixie" build environment using Podman o
 ## 3. Host & Container Architecture
 
 ```text
-Mint Host (Linux Mint 22.3)
+Non-Debian Linux Host (x86_64)
    │
    ├── Podman 4.9.3 (Rootless, daemonless OCI engine)
    │       │
@@ -40,7 +40,7 @@ To understand distro isolation, we must distinguish the components of a Linux co
 
 | Component | In Container | Handled By |
 | :--- | :--- | :--- |
-| **Linux Kernel** | Shared directly with host (`7.0.0-28-generic`) | Host Linux Mint kernel |
+| **Linux Kernel** | Shared directly with host (`7.0.0-28-generic`) | Physical host kernel |
 | **System Calls** | Kernel handles `clone`, `unshare`, `mount`, `execve` | Host kernel syscall interface |
 | **Userspace Libraries** | Pure Debian 13 glibc (`/lib/x86_64-linux-gnu/libc.so.6`) | Container image filesystem |
 | **Package Database** | Pure Debian DPKG database (`/var/lib/dpkg/status`) | Container image filesystem |
@@ -91,7 +91,7 @@ Running check-builder.sh inside container via Podman...
 ======================================================
 Mounted Repository: /home/mint/XedraLinux -> /workspace
 Container Image:    xedra-builder:trixie
-Type 'exit' to return to Linux Mint host.
+Type 'exit' to return to host system.
 
 ======================================================
   Xedra Linux - Debian Build Environment Validation   
@@ -135,4 +135,4 @@ Status: Isolated Debian Build Environment is healthy and verified.
 - ❌ Did NOT configure graphical components (X11, Fluxbox).
 - ❌ Did NOT configure SysVinit.
 - ❌ Did NOT build an ISO image.
-- ❌ Did NOT modify the Linux Mint host.
+- ❌ Did NOT modify the physical host system.

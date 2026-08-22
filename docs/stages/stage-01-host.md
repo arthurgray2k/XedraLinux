@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-Validate that the development machine (Linux Mint 22.3) satisfies all prerequisite hardware, virtualization, and tooling requirements for Xedra Linux engineering and VM-based testing, without modifying the host operating system.
+Validate that the physical development machine (non-Debian Linux host) satisfies all prerequisite hardware, virtualization, and tooling requirements for Xedra Linux engineering and VM-based testing, without modifying the host operating system.
 
 ---
 
@@ -15,7 +15,7 @@ Validate that the development machine (Linux Mint 22.3) satisfies all prerequisi
 
 ## 3. Host Environment Specifications
 
-- **Operating System**: Linux Mint 22.3 "Zena" (`x86_64`)
+- **Operating System**: Non-Debian Linux host (`x86_64`)
 - **Host Kernel**: `7.0.0-28-generic`
 - **CPU Virtualization**: Intel VT-x (`VMX` hardware extension detected)
 - **Virtualization Device**: `/dev/kvm` (accessible with RW permissions)
@@ -56,7 +56,7 @@ cd ~/XedraLinux
 
 ## 7. What Happened Internally
 
-1. `check-host.sh` read `/etc/os-release` to confirm Linux Mint based on Ubuntu/Debian.
+1. `check-host.sh` read `/etc/os-release` to confirm the physical host operating system environment.
 2. Verified `uname -m` output is `x86_64`.
 3. Checked `/proc/cpuinfo` for Intel `vmx` or AMD `svm` CPU flags.
 4. Tested `/dev/kvm` permissions to verify unprivileged user access to hardware virtualization.
@@ -67,7 +67,7 @@ cd ~/XedraLinux
 
 ## 8. What Was Learned
 
-- **Host Protection**: Debian is intentionally not installed directly on the physical host machine. Using Mint as the development workstation allows us to run standard IDEs, Git, and browsers while isolating distro builds inside containers and VMs.
+- **Host Protection**: Debian is intentionally not installed directly on the physical host machine. Using the physical host as the development workstation allows us to run standard IDEs, Git, and browsers while isolating distro builds inside virtual machines.
 - **Hardware Acceleration**: Access to `/dev/kvm` enables QEMU to execute guest instructions directly on the physical CPU without software emulation slowdowns.
 
 ---
@@ -91,7 +91,7 @@ cd ~/XedraLinux
 Inspecting host system configuration, virtualization, and build prerequisites...
 
 --- Host System & Architecture ---
-  [ AVAILABLE        ] Host OS -> Linux Mint 22.3 (ID: linuxmint, Base: ubuntu debian)
+  [ AVAILABLE        ] Host OS -> Non-Debian Linux host (x86_64)
   [ AVAILABLE        ] Host Architecture -> x86_64 (amd64 compatible)
   [ AVAILABLE        ] Host Kernel -> 7.0.0-28-generic
 
@@ -112,8 +112,8 @@ Inspecting host system configuration, virtualization, and build prerequisites...
   [ AVAILABLE        ] dpkg -> Host DPKG available (version 1.22.6)
 
 --- Debian Distro Build Utilities ---
-  [ NOT REQUIRED YET ] debootstrap -> Will run inside isolated container
-  [ NOT REQUIRED YET ] live-build (lb) -> Will run inside isolated container
+  [ NOT REQUIRED YET ] debootstrap -> Will run inside isolated builder VM
+  [ NOT REQUIRED YET ] live-build (lb) -> Will run inside isolated builder VM
 
 --- System Resources ---
   [ AVAILABLE        ] Host Memory (RAM) -> Total: 15 GB, Available: 11 GB
@@ -140,5 +140,5 @@ Status: Host is ready for setting up the isolated Debian build environment.
 
 - ❌ Did NOT install Debian onto the host disk.
 - ❌ Did NOT modify host bootloaders or GRUB.
-- ❌ Did NOT install development packages onto the Mint host.
+- ❌ Did NOT install development packages onto the physical host.
 - ❌ Did NOT power on or modify the `xedra-lab` VM.

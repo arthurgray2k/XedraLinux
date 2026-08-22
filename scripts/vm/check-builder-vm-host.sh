@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Purpose:
-#   Validates that the Linux Mint host hypervisor (libvirt/QEMU/KVM),
+#   Validates that the host hypervisor (libvirt/QEMU/KVM),
 #   storage pool, and UEFI firmware are ready to instantiate the
 #   authoritative 'xedra-builder' Debian 13 VM.
 #
