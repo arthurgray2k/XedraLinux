@@ -176,7 +176,9 @@ Pin: release *
 Pin-Priority: 1001
 PREF_EOF
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration and APT pinning generated"
+    cp "${LB_DIR}/config/archives/sysvinit.pref.chroot" "${LB_DIR}/config/archives/sysvinit.pref.bootstrap"
+
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration and APT pinning generated (bootstrap & chroot)"
     echo ""
 }
 
