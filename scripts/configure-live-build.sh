@@ -8,9 +8,9 @@
 #   Initializes and configures the Debian 'live-build' workspace under
 #   ~/XedraLinux/build/live-build with Xedra's exact specifications:
 #     - Base: Debian 13 "Trixie" (amd64)
-#     - Init System: SysVinit (sysvinit-core) as PID 1
+#     - Init System: SysVinit (sysvinit-core) via chroot hook
 #     - Desktop: X11 + Fluxbox + xterm
-#     - Kernel: linux-image-amd64 + live-boot + live-config-sysvinit
+#     - Kernel: linux-image-amd64 + live-boot
 #     - Bootloader: Hybrid UEFI + BIOS (GRUB + Syslinux)
 # ==============================================================================
 
@@ -53,9 +53,9 @@ prepare_workspace() {
     mkdir -p "${LB_DIR}"
     cd "${LB_DIR}"
 
-    # Clean any previous build artifacts
+    # Clean any previous build artifacts completely
     if [[ -d "${LB_DIR}/config" ]]; then
-        echo "Cleaning previous live-build config..."
+        echo "Purging previous live-build config and chroot..."
         lb clean --purge 2>/dev/null || true
     fi
 
@@ -90,18 +90,12 @@ configure_xedra_packages() {
     cat << 'EOF' > "${LB_DIR}/config/package-lists/xedra.list.chroot"
 # Xedra 0.1 Core Package List
 
-# 1. Init System (SysVinit prioritized as PID 1)
-sysvinit-core
-initscripts
-insserv
-
-# 2. Linux Kernel & Live Boot Infrastructure
+# 1. Linux Kernel & Live Boot Infrastructure
 linux-image-amd64
 live-boot
 live-config
-live-config-sysvinit
 
-# 3. Minimal Display Server & Window Manager
+# 2. Minimal Display Server & Window Manager
 xserver-xorg-core
 xserver-xorg-video-all
 xserver-xorg-input-all
@@ -113,7 +107,7 @@ fluxbox
 xterm
 dbus-x11
 
-# 4. Essential Utilities
+# 3. Essential System Utilities
 coreutils
 util-linux
 pciutils
@@ -131,23 +125,36 @@ EOF
     echo ""
 }
 
-configure_systemd_exclusion() {
-    echo -e "${COLOR_BOLD}--- 3. Configuring APT Pinning for SysVinit ---${COLOR_RESET}"
-    mkdir -p "${LB_DIR}/config/archives"
+configure_sysvinit_hook() {
+    echo -e "${COLOR_BOLD}--- 3. Installing SysVinit Transition Chroot Hook ---${COLOR_RESET}"
+    mkdir -p "${LB_DIR}/config/hooks/normal"
 
-    # Prioritize sysvinit-core (Pin-Priority: 1001) so APT satisfies all virtual init
-    # dependencies with sysvinit-core rather than systemd-sysv
-    cat << 'EOF' > "${LB_DIR}/config/archives/sysvinit.pref.chroot"
-Package: sysvinit-core
-Pin: release *
-Pin-Priority: 1001
+    # Clean old archives preferences if any
+    rm -rf "${LB_DIR}/config/archives"
 
-Package: systemd-sysv
-Pin: release *
-Pin-Priority: 1
+    # In live-build, chroot hooks run inside the chroot during assembly.
+    # This allows an atomic apt-get transition to sysvinit-core without
+    # triggering live-build's pre-flight package conflict solver.
+    cat << 'EOF' > "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
+#!/bin/sh
+set -e
+echo "=== [XEDRA HOOK] Transitioning chroot to SysVinit PID 1 ==="
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    sysvinit-core \
+    initscripts \
+    insserv \
+    live-config-sysvinit \
+    systemd-sysv- \
+    --allow-remove-essential
+
+echo "=== [XEDRA HOOK] SysVinit installed; systemd-sysv purged ==="
 EOF
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] APT pinning configured (sysvinit-core Priority: 1001)"
+    chmod +x "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] SysVinit chroot hook installed"
     echo ""
 }
 
@@ -211,7 +218,7 @@ main() {
     verify_environment
     prepare_workspace
     configure_xedra_packages
-    configure_systemd_exclusion
+    configure_sysvinit_hook
     configure_chroot_overlays
     verify_configuration
 }
