@@ -69,15 +69,15 @@ check_existing_vm() {
 launch_vm() {
     echo -e "${COLOR_BOLD}--- Launching 'xedra-lab' with UEFI Firmware ---${COLOR_RESET}"
     
+    # Configure permanent CD-ROM with boot order 1 to prevent UEFI fallback to PXE
     virt-install \
         --connect qemu:///system \
         --name "${VM_NAME}" \
         --ram "${RAM_MB}" \
         --vcpus "${VCPUS}" \
         --osinfo debian12 \
-        --cdrom "${ISO_PATH}" \
-        --boot uefi,bootmenu.enable=on \
-        --disk none \
+        --disk path="${ISO_PATH}",device=cdrom,readonly=on,boot.order=1 \
+        --boot uefi \
         --network network=default,model=virtio \
         --graphics spice \
         --video qxl \
@@ -92,13 +92,6 @@ launch_vm() {
     echo "To view the graphical display in real-time:"
     echo "  virt-manager"
     echo "  (or: virt-viewer --connect qemu:///system xedra-lab &)"
-    echo ""
-    echo "What to observe during boot:"
-    echo "  1. TianoCore UEFI Splash Screen"
-    echo "  2. GRUB 2.12 Live Boot Menu"
-    echo "  3. Linux Kernel 6.12 initialization"
-    echo "  4. SysVinit starting services (initscripts / rcS)"
-    echo "  5. Live user landing in the Fluxbox Desktop with xterm!"
     echo ""
 }
 
