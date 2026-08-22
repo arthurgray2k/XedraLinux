@@ -54,13 +54,13 @@ prepare_workspace() {
     mkdir -p "${LB_DIR}"
     cd "${LB_DIR}"
 
-    # Clean previous build state completely to guarantee clean build
+    # Clean intermediate build stages but PRESERVE local downloaded package archives (cache/packages.*)
     if [[ -d "${LB_DIR}/config" ]]; then
-        echo "Purging previous live-build state..."
-        lb clean --purge 2>/dev/null || true
+        echo "Cleaning previous live-build stages (preserving local package cache)..."
+        lb clean --stage --binary --chroot 2>/dev/null || true
     fi
 
-    # Run lb config with standard parameters
+    # Run lb config with package cache enabled and stage cache disabled
     echo "Executing 'lb config'..."
     lb config \
         --distribution trixie \
@@ -76,11 +76,14 @@ prepare_workspace() {
         --iso-publisher "Xedra Linux Project" \
         --iso-volume "XEDRA_0_3" \
         --system live \
+        --cache true \
+        --cache-packages true \
+        --cache-stages none \
         --bootappend-live "boot=live components hostname=xedra username=xedra quiet" \
         --apt-recommends false \
         --verbose
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated (package cache enabled)"
     echo ""
 }
 
