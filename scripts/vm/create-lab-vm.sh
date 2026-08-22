@@ -83,6 +83,7 @@ launch_vm() {
         --graphics spice \
         --video qxl \
         --channel spicevmc \
+        --events on_reboot=restart,on_poweroff=destroy,on_crash=restart \
         --noautoconsole
 
     echo ""
