@@ -69,15 +69,16 @@ check_existing_vm() {
 launch_vm() {
     echo -e "${COLOR_BOLD}--- Launching 'xedra-lab' with UEFI Firmware ---${COLOR_RESET}"
     
-    # Configure permanent CD-ROM with boot order 1 to prevent UEFI fallback to PXE
+    # Launch ephemeral UEFI VM from Live CD ISO
     virt-install \
         --connect qemu:///system \
         --name "${VM_NAME}" \
         --ram "${RAM_MB}" \
         --vcpus "${VCPUS}" \
         --osinfo debian12 \
-        --disk path="${ISO_PATH}",device=cdrom,readonly=on,boot.order=1 \
+        --cdrom "${ISO_PATH}" \
         --boot uefi \
+        --disk none \
         --network network=default,model=virtio \
         --graphics spice \
         --video qxl \
