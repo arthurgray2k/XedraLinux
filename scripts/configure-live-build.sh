@@ -72,10 +72,11 @@ prepare_workspace() {
         --mirror-binary "https://deb.debian.org/debian" \
         --linux-packages "linux-image" \
         --linux-flavours "amd64" \
-        --iso-application "Xedra Linux" \
+        --iso-application "Xedra Linux 0.1" \
         --iso-publisher "Xedra Linux Project" \
         --iso-volume "XEDRA_0_1" \
         --system live \
+        --bootappend-live "boot=live components hostname=xedra username=xedra quiet" \
         --apt-recommends false \
         --verbose
 
@@ -239,6 +240,35 @@ configure_chroot_overlays() {
         echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Fluxbox menu overlay added"
     fi
 
+    # Install custom Xedra branding and ASCII issue banner
+    cat << 'ISSUE_EOF' > "${LB_DIR}/config/includes.chroot/etc/issue"
+ __  __          _           _     _                  
+ \ \/ /___  __| |_ __ __ _  | |   (_)_ __  _   ___  __
+  \  // _ \/ _` | '__/ _` | | |   | | '_ \| | | \ \/ /
+  /  \  __/ (_| | | | (_| | | |___| | | | | |_| |>  < 
+ /_/\_\___|\__,_|_|  \__,_| |_____|_|_| |_|\__,_/_/\_\
+
+ Xedra Linux 0.1 (amd64) — Genesis
+ Kernel \r on an \m (\l)
+
+ISSUE_EOF
+
+    cp "${LB_DIR}/config/includes.chroot/etc/issue" "${LB_DIR}/config/includes.chroot/etc/issue.net"
+
+    # Install custom Xedra /etc/os-release
+    cat << 'OS_EOF' > "${LB_DIR}/config/includes.chroot/etc/os-release"
+NAME="Xedra Linux"
+PRETTY_NAME="Xedra Linux 0.1 (Genesis)"
+ID=xedra
+ID_LIKE=debian
+VERSION="0.1"
+VERSION_ID="0.1"
+VERSION_CODENAME=genesis
+HOME_URL="https://github.com/arthurgray2k/XedraLinux"
+SUPPORT_URL="https://github.com/arthurgray2k/XedraLinux/issues"
+BUG_REPORT_URL="https://github.com/arthurgray2k/XedraLinux/issues"
+OS_EOF
+
     # Configure auto-login for live session
     mkdir -p "${LB_DIR}/config/includes.chroot/etc/live/config.conf.d"
     cat << 'EOF' > "${LB_DIR}/config/includes.chroot/etc/live/config.conf.d/xedra.conf"
@@ -248,7 +278,7 @@ LIVE_USER_DEFAULT_GROUPS="sudo,audio,video,cdrom,plugdev,kvm,input"
 LIVE_CONFIG_NOAUTOLOGIN="false"
 EOF
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Live configuration hooks added"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Xedra branding, ASCII issue banner, and live hooks added"
     echo ""
 }
 
