@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Xedra Linux - Stage 7: Configure live-build for Xedra 0.3 ISO Generation
+# Xedra Linux - Stage 7: Configure live-build for Xedra 0.4.1 ISO Generation
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -8,9 +8,9 @@
 #   Initializes and configures the Debian 'live-build' workspace under
 #   ~/XedraLinux/build/live-build with Xedra's exact specifications:
 #     - Reads multi-profile configuration from config/xedra-build.json
-#     - Supports profiles: dev (fast package cache) & release (fresh purge)
+#     - Supports profiles: dev (fast package & bootstrap cache), release, minimal
 #     - Base: Debian 13 "Trixie" (amd64)
-#     - Init System: SysVinit (sysvinit-core) via chroot transition hook
+#     - Init System: SysVinit (sysvinit-core) via pre-cached packages & hook
 #     - Desktop: X11 + Fluxbox + xterm + SPICE agent + xsetroot (1600x900 wide)
 #     - Hardware/Input: udev + kmod + libinput + xserver-xorg-legacy
 #     - Kernel: linux-image-amd64 + live-boot
@@ -48,12 +48,12 @@ done
 
 # Default variables
 DISTRO_NAME="Xedra Linux"
-DISTRO_VERSION="0.4"
+DISTRO_VERSION="0.4.1"
 DISTRO_CODENAME="genesis"
-ISO_VOLUME="XEDRA_0_4"
-ISO_APPLICATION="Xedra Linux 0.4"
+ISO_VOLUME="XEDRA_0_4_1"
+ISO_APPLICATION="Xedra Linux 0.4.1"
 ISO_PUBLISHER="Xedra Linux Project"
-ISO_NAME="xedra-0.4-amd64.iso"
+ISO_NAME="xedra-0.4.1-amd64.iso"
 CACHE_PACKAGES=true
 PURGE_ON_CLEAN=false
 DEBIAN_DISTRIBUTION="trixie"
@@ -91,8 +91,10 @@ print(f'DEBIAN_ARCHIVE_AREAS=\"{d.get(\"debian_base\", {}).get(\"archive_areas\"
 print(f'DEBIAN_MIRROR_BOOTSTRAP=\"{d.get(\"debian_base\", {}).get(\"mirror_bootstrap\", \"https://deb.debian.org/debian\")}\"')
 print(f'DEBIAN_MIRROR_BINARY=\"{d.get(\"debian_base\", {}).get(\"mirror_binary\", \"https://deb.debian.org/debian\")}\"')
 print(f'CACHE_PACKAGES={str(p.get(\"cache_packages\", True)).lower()}')
+print(f'CACHE_BOOTSTRAP={str(p.get(\"cache_bootstrap\", True)).lower()}')
+print(f'FAST_IO={str(p.get(\"fast_io\", True)).lower()}')
 print(f'PURGE_ON_CLEAN={str(p.get(\"purge_on_clean\", False)).lower()}')
-print(f'SQUASHFS_COMPRESSION=\"{p.get(\"squashfs_compression\", \"none\")}\"')
+print(f'SQUASHFS_COMPRESSION=\"{p.get(\"squashfs_compression\", \"gzip\")}\"')
 print(f'LIVE_HOSTNAME=\"{d.get(\"live_session\", {}).get(\"hostname\", \"xedra\")}\"')
 print(f'LIVE_USERNAME=\"{d.get(\"live_session\", {}).get(\"username\", \"xedra\")}\"')
 print(f'LIVE_USER_GROUPS=\"{d.get(\"live_session\", {}).get(\"user_groups\", \"sudo,audio,video,cdrom,plugdev,kvm,input,tty\")}\"')
@@ -109,6 +111,8 @@ print_header() {
     echo "Active Profile:       ${BUILD_PROFILE}"
     echo "Target ISO Output:    ${ISO_NAME}"
     echo "Package Caching:      ${CACHE_PACKAGES}"
+    echo "Bootstrap Caching:    ${CACHE_BOOTSTRAP}"
+    echo "Fast I/O:             ${FAST_IO}"
     echo "Squashfs Compression: ${SQUASHFS_COMPRESSION}"
     echo "Purge on Clean:       ${PURGE_ON_CLEAN}"
     echo "Workspace:            ${LB_DIR}"
@@ -148,13 +152,30 @@ prepare_workspace() {
 
     local cache_flag="false"
     local cache_packages_flag="false"
+    local cache_stages_flag="none"
     if [[ "${CACHE_PACKAGES}" == "true" ]]; then
         cache_flag="true"
         cache_packages_flag="true"
     fi
+    if [[ "${CACHE_BOOTSTRAP}" == "true" ]]; then
+        cache_stages_flag="bootstrap"
+    fi
 
-    # Run lb config with package cache options (and stage cache disabled to prevent conflict)
-    echo "Executing 'lb config' (Profile: ${BUILD_PROFILE})..."
+    # Configure squashfs compression flags directly for lb config
+    local compression_type="gzip"
+    local compression_level_opt=()
+    if [[ "${SQUASHFS_COMPRESSION}" == "xz" ]]; then
+        compression_type="xz"
+    elif [[ "${SQUASHFS_COMPRESSION}" == "gzip" ]]; then
+        compression_type="gzip"
+        compression_level_opt=("--chroot-squashfs-compression-level" "1")
+    elif [[ "${SQUASHFS_COMPRESSION}" == "zstd" ]]; then
+        compression_type="zstd"
+        compression_level_opt=("--chroot-squashfs-compression-level" "1")
+    fi
+
+    # Run lb config with optimized cache and compression parameters
+    echo "Executing 'lb config' (Profile: ${BUILD_PROFILE}, Compression: ${compression_type})..."
     lb config \
         --distribution "${DEBIAN_DISTRIBUTION}" \
         --architectures "${DEBIAN_ARCH}" \
@@ -171,22 +192,23 @@ prepare_workspace() {
         --system live \
         --cache "${cache_flag}" \
         --cache-packages "${cache_packages_flag}" \
-        --cache-stages none \
+        --cache-stages "${cache_stages_flag}" \
+        --chroot-squashfs-compression-type "${compression_type}" \
+        "${compression_level_opt[@]}" \
         --bootappend-live "boot=live components hostname=${LIVE_HOSTNAME} username=${LIVE_USERNAME} quiet" \
         --apt-recommends false \
         --verbose
 
-    # Configure squashfs compression based on profile (uncompressed for dev, xz for release)
-    local mksquash_opt="-no-compression"
-    if [[ "${SQUASHFS_COMPRESSION}" == "xz" ]]; then
-        mksquash_opt="-comp xz"
-    elif [[ "${SQUASHFS_COMPRESSION}" == "gzip" ]]; then
-        mksquash_opt="-comp gzip -Xcompression-level 1"
+    # Inject force-unsafe-io into dpkg to eliminate 130,000 fsync bottlenecks in VM
+    if [[ "${FAST_IO}" == "true" ]]; then
+        mkdir -p "${LB_DIR}/config/includes.bootstrap/etc/dpkg/dpkg.cfg.d"
+        mkdir -p "${LB_DIR}/config/includes.chroot/etc/dpkg/dpkg.cfg.d"
+        echo "force-unsafe-io" > "${LB_DIR}/config/includes.bootstrap/etc/dpkg/dpkg.cfg.d/01-fast"
+        echo "force-unsafe-io" > "${LB_DIR}/config/includes.chroot/etc/dpkg/dpkg.cfg.d/01-fast"
+        echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Fast I/O (force-unsafe-io) enabled for dpkg"
     fi
-    mkdir -p "${LB_DIR}/config"
-    echo "MKSQUASHFS_OPTIONS=\"${mksquash_opt}\"" >> "${LB_DIR}/config/binary"
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated (Profile: ${BUILD_PROFILE}, Squashfs: ${SQUASHFS_COMPRESSION})"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated (Profile: ${BUILD_PROFILE}, Compression: ${compression_type})"
     echo ""
 }
 
@@ -194,7 +216,7 @@ configure_xedra_packages() {
     echo -e "${COLOR_BOLD}--- 2. Configuring Xedra Package Lists ---${COLOR_RESET}"
     mkdir -p "${LB_DIR}/config/package-lists"
 
-    # Core Package List for All Profiles (Kernel, Languages, Editors, Installer, CLI Tools)
+    # Core Package List for All Profiles (Kernel, Languages, Editors, Installer, CLI Tools, SysVinit)
     cat << 'EOF' > "${LB_DIR}/config/package-lists/xedra.list.chroot"
 # Xedra 0.4 Core Package List
 
@@ -205,7 +227,16 @@ live-config
 udev
 kmod
 
-# 2. Languages, Toolchains & Editors
+# 2. SysVinit PID 1 Architecture & Session Subsystem (Pre-cached locally)
+sysvinit-core
+initscripts
+insserv
+orphan-sysvinit-scripts
+live-config-sysvinit
+elogind
+libpam-elogind
+
+# 3. Languages, Toolchains & Editors
 python3
 python3-pip
 python3-venv
@@ -214,7 +245,7 @@ micro
 nano
 vim-tiny
 
-# 3. Native Disk Installer & Filesystem Utilities
+# 4. Native Disk Installer & Filesystem Utilities
 dialog
 parted
 dosfstools
@@ -223,7 +254,7 @@ rsync
 grub-efi-amd64-bin
 grub-pc-bin
 
-# 4. Networking & System Utilities
+# 5. Networking & System Utilities
 iproute2
 iputils-ping
 dhcpcd-base
@@ -236,11 +267,11 @@ procps
 sudo
 EOF
 
-    # 5. Display Server, Window Manager & Input Drivers (GUI Profiles Only)
+    # 6. Display Server, Window Manager & Input Drivers (GUI Profiles Only)
     if [[ "${BUILD_PROFILE}" != "minimal" ]]; then
         cat << 'EOF' >> "${LB_DIR}/config/package-lists/xedra.list.chroot"
 
-# 5. Graphical Desktop Environment (Fluxbox + X11 + SPICE)
+# 6. Graphical Desktop Environment (Fluxbox + X11 + SPICE)
 xserver-xorg-core
 xserver-xorg-legacy
 xserver-xorg-video-all
@@ -272,20 +303,11 @@ configure_sysvinit_hook() {
     cat << EOF > "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
 #!/bin/sh
 set -e
-echo "=== [XEDRA HOOK] Transitioning chroot to SysVinit PID 1 & elogind ==="
+echo "=== [XEDRA HOOK] Finalizing SysVinit PID 1 transition & user configuration ==="
 export DEBIAN_FRONTEND=noninteractive
 
-apt-get update
-apt-get install -y --no-install-recommends \
-    sysvinit-core \
-    initscripts \
-    insserv \
-    orphan-sysvinit-scripts \
-    live-config-sysvinit \
-    systemd-sysv- \
-    elogind \
-    libpam-elogind \
-    --allow-remove-essential
+# Ensure systemd-sysv is purged in favor of sysvinit-core
+apt-get purge -y --allow-remove-essential systemd-sysv 2>/dev/null || true
 
 echo "=== [XEDRA HOOK] Setting default users and passwords ==="
 # Set root password to 'root'

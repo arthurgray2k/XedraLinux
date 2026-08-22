@@ -104,13 +104,12 @@ For future releases, automated installation options will be integrated directly 
 
 | Installer Option | Type | Description | Target Milestone |
 | :--- | :--- | :--- | :--- |
-| **`xedra-installer`** | Terminal / CLI TUI | Minimal shell/whiptail menu asking for disk selection, hostname, timezone, and user setup. Completes installation in <60 seconds. | **Milestone 0.2** |
-| **Calamares** | Modern Qt Graphical Installer | Modular GUI installer wizard with visual disk partitioning, timezone maps, and automated user creation. Used by distributions like EndeavourOS, Manjaro, and Lubuntu. | **Milestone 0.3** |
+| **`xedra-installer`** | Terminal / CLI TUI | Minimal shell/dialog menu asking for disk selection, confirmation, and automated GPT/UEFI/BIOS installation. | **Deployed in 0.4.1** |
+| **Calamares** | Modern Qt Graphical Installer | Modular GUI installer wizard with visual disk partitioning, timezone maps, and automated user creation. Used by distributions like EndeavourOS, Manjaro, and Lubuntu. | **Future Milestone** |
 
 ---
 
 ## 5. Architectural Summary
 
-- **Xedra 0.1** is packaged as a **Live Hybrid ISO** for rapid testing, demonstration, and system recovery.
-- Its internal root filesystem is **100% standard and fully installable** to persistent block devices.
-- Milestone 0.2+ will introduce integrated CLI and GUI installers for streamlined, one-click disk deployment.
+- **Xedra Linux** is packaged as a **Live Hybrid ISO** for rapid testing, demonstration, system recovery, and persistent installation.
+- Its internal root filesystem is **100% standard and fully installable** to persistent block devices via the integrated `/usr/local/bin/xedra-installer`.
