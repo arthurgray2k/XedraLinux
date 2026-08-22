@@ -170,14 +170,18 @@ In accordance with project policy, **no scripts are deleted or moved during this
 | Script | Classification | Primary Environment | Status |
 | :--- | :--- | :--- | :--- |
 | `scripts/check-host.sh` | `ACTIVE` | Linux Host | Maintained |
-| `scripts/check-container-runtime.sh` | `HISTORICAL` | Linux Host | Preserved |
-| `scripts/build-builder-image.sh` | `HISTORICAL` | Linux Host | Preserved |
-| `scripts/check-builder.sh` | `HISTORICAL` | Container | Preserved |
-| `scripts/enter-builder.sh` | `HISTORICAL` | Linux Host | Preserved |
-| `scripts/bootstrap-rootfs.sh` | `HISTORICAL` | Container | Preserved |
-| `scripts/complete-rootfs.sh` | `HISTORICAL` | Container | Preserved |
+| `archive/container/check-container-runtime.sh` | `HISTORICAL` | Linux Host | Archived in `archive/container/` |
+| `archive/container/build-builder-image.sh` | `HISTORICAL` | Linux Host | Archived in `archive/container/` |
+| `archive/container/check-builder.sh` | `HISTORICAL` | Container | Archived in `archive/container/` |
+| `archive/container/enter-builder.sh` | `HISTORICAL` | Linux Host | Archived in `archive/container/` |
+| `archive/container/bootstrap-rootfs.sh` | `HISTORICAL` | Container | Archived in `archive/container/` |
+| `archive/container/complete-rootfs.sh` | `HISTORICAL` | Container | Archived in `archive/container/` |
 | `scripts/inspect-rootfs.sh` | `ACTIVE` | Builder VM / Host | Maintained |
 | `scripts/enter-rootfs.sh` | `ACTIVE` | Builder VM | Maintained |
+| `scripts/transition-sysvinit.sh` | `ACTIVE` | Builder VM | Maintained |
+| `scripts/configure-desktop.sh` | `ACTIVE` | Builder VM | Maintained |
+| `scripts/configure-live-build.sh` | `ACTIVE` | Builder VM | Maintained |
+| `scripts/build-iso.sh` | `ACTIVE` | Builder VM | Maintained |
 | `scripts/vm/check-builder-vm-host.sh` | `ACTIVE` | Linux Host | Maintained |
 | `scripts/vm/create-builder-vm.sh` | `ACTIVE` | Linux Host | Maintained |
 | `scripts/vm/start-builder-vm.sh` | `ACTIVE` | Linux Host | Maintained |
@@ -185,3 +189,5 @@ In accordance with project policy, **no scripts are deleted or moved during this
 | `scripts/vm/inspect-builder-vm.sh` | `ACTIVE` | Linux Host | Maintained |
 | `scripts/vm/destroy-builder-vm.sh` | `ACTIVE` | Linux Host | Maintained |
 | `scripts/vm/bootstrap-builder.sh` | `ACTIVE` | Builder VM (`xedra-builder`) | Maintained |
+| `scripts/vm/create-lab-vm.sh` | `ACTIVE` | Linux Host | Maintained |
+| `scripts/vm/destroy-lab-vm.sh` | `ACTIVE` | Linux Host | Maintained |
