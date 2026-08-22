@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Xedra Linux - Stage 7: Configure live-build for Xedra 0.2 ISO Generation
+# Xedra Linux - Stage 7: Configure live-build for Xedra 0.3 ISO Generation
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -8,8 +8,8 @@
 #   Initializes and configures the Debian 'live-build' workspace under
 #   ~/XedraLinux/build/live-build with Xedra's exact specifications:
 #     - Reads multi-profile declarative JSON manifest from config/xedra-build.json
+#     - Uses APT pinning to install SysVinit (sysvinit-core) natively without systemd conflicts
 #     - Base: Debian 13 "Trixie" (amd64)
-#     - Init System: SysVinit (sysvinit-core) via chroot hook
 #     - Desktop: X11 + Fluxbox + xterm + SPICE agent + xsetroot
 #     - Hardware/Input: udev + kmod + libinput + xserver-xorg-legacy
 #     - Kernel: linux-image-amd64 + live-boot
@@ -47,10 +47,10 @@ done
 
 # Default variables
 DISTRO_NAME="Xedra Linux"
-DISTRO_VERSION="0.2"
+DISTRO_VERSION="0.3"
 DISTRO_CODENAME="genesis"
-ISO_VOLUME="XEDRA_0_2"
-ISO_APPLICATION="Xedra Linux 0.2"
+ISO_VOLUME="XEDRA_0_3"
+ISO_APPLICATION="Xedra Linux 0.3"
 ISO_PUBLISHER="Xedra Linux Project"
 CACHE_PACKAGES=true
 PURGE_ON_CLEAN=false
@@ -72,10 +72,10 @@ with open('${JSON_CONFIG}') as f:
     d = json.load(f)
 p = d.get('profiles', {}).get('${BUILD_PROFILE}', d.get('profiles', {}).get('dev', {}))
 print(f'DISTRO_NAME=\"{d.get(\"distro\", {}).get(\"name\", \"Xedra Linux\")}\"')
-print(f'DISTRO_VERSION=\"{d.get(\"distro\", {}).get(\"version\", \"0.2\")}\"')
+print(f'DISTRO_VERSION=\"{d.get(\"distro\", {}).get(\"version\", \"0.3\")}\"')
 print(f'DISTRO_CODENAME=\"{d.get(\"distro\", {}).get(\"codename\", \"genesis\")}\"')
-print(f'ISO_VOLUME=\"{d.get(\"distro\", {}).get(\"iso_volume\", \"XEDRA_0_2\")}\"')
-print(f'ISO_APPLICATION=\"{d.get(\"distro\", {}).get(\"iso_application\", \"Xedra Linux 0.2\")}\"')
+print(f'ISO_VOLUME=\"{d.get(\"distro\", {}).get(\"iso_volume\", \"XEDRA_0_3\")}\"')
+print(f'ISO_APPLICATION=\"{d.get(\"distro\", {}).get(\"iso_application\", \"Xedra Linux 0.3\")}\"')
 print(f'ISO_PUBLISHER=\"{d.get(\"distro\", {}).get(\"iso_publisher\", \"Xedra Linux Project\")}\"')
 print(f'DEBIAN_DISTRIBUTION=\"{d.get(\"debian_base\", {}).get(\"distribution\", \"trixie\")}\"')
 print(f'DEBIAN_ARCH=\"{d.get(\"debian_base\", {}).get(\"architecture\", \"amd64\")}\"')
@@ -160,7 +160,23 @@ prepare_workspace() {
         --apt-recommends false \
         --verbose
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated"
+    # Setup APT Preferences (Pinning) to guarantee SysVinit selection without systemd conflicts
+    mkdir -p "${LB_DIR}/config/archives"
+    cat << 'PREF_EOF' > "${LB_DIR}/config/archives/sysvinit.pref.chroot"
+Package: systemd-sysv
+Pin: release *
+Pin-Priority: -1
+
+Package: sysvinit-core
+Pin: release *
+Pin-Priority: 1001
+
+Package: live-config-sysvinit
+Pin: release *
+Pin-Priority: 1001
+PREF_EOF
+
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration and APT pinning generated"
     echo ""
 }
 
@@ -168,14 +184,20 @@ configure_xedra_packages() {
     echo -e "${COLOR_BOLD}--- 2. Configuring Xedra Package Lists ---${COLOR_RESET}"
     mkdir -p "${LB_DIR}/config/package-lists"
 
-    # Complete Xedra Core Package List
+    # Complete Xedra Core Package List with explicit SysVinit components
     cat << 'EOF' > "${LB_DIR}/config/package-lists/xedra.list.chroot"
 # Xedra Core Package List
 
 # 1. Linux Kernel & Hardware Device Subsystem
 linux-image-amd64
 live-boot
-live-config
+live-config-sysvinit
+sysvinit-core
+initscripts
+insserv
+orphan-sysvinit-scripts
+elogind
+libpam-elogind
 udev
 kmod
 
@@ -215,31 +237,14 @@ EOF
 }
 
 configure_sysvinit_hook() {
-    echo -e "${COLOR_BOLD}--- 3. Installing SysVinit Transition Chroot Hook ---${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}--- 3. Installing System Configuration Chroot Hook ---${COLOR_RESET}"
     mkdir -p "${LB_DIR}/config/hooks/normal"
-
-    # Clean old archives preferences if any
-    rm -rf "${LB_DIR}/config/archives"
 
     cat << 'EOF' > "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
 #!/bin/sh
 set -e
-echo "=== [XEDRA HOOK] Transitioning chroot to SysVinit PID 1 & elogind ==="
-export DEBIAN_FRONTEND=noninteractive
+echo "=== [XEDRA HOOK] Setting default users, passwords, and service defaults ==="
 
-apt-get update
-apt-get install -y --no-install-recommends \
-    sysvinit-core \
-    initscripts \
-    insserv \
-    orphan-sysvinit-scripts \
-    live-config-sysvinit \
-    systemd-sysv- \
-    elogind \
-    libpam-elogind \
-    --allow-remove-essential
-
-echo "=== [XEDRA HOOK] Setting default users and passwords ==="
 # Set root password to 'root'
 echo "root:root" | chpasswd
 
@@ -280,11 +285,11 @@ allow-hotplug enp1s0
 iface enp1s0 inet dhcp
 NET_EOF
 
-echo "=== [XEDRA HOOK] SysVinit installed; input & users configured ==="
+echo "=== [XEDRA HOOK] Users, permissions, and network configured ==="
 EOF
 
     chmod +x "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] SysVinit chroot hook installed"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Configuration chroot hook installed"
     echo ""
 }
 
