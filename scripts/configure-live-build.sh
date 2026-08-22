@@ -242,8 +242,9 @@ parted
 dosfstools
 e2fsprogs
 rsync
-grub-efi-amd64-bin
-grub-pc-bin
+grub-efi-amd64
+grub-pc
+grub2-common
 
 # 4. Networking & System Utilities
 iproute2
