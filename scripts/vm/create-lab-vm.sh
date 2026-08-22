@@ -53,8 +53,8 @@ verify_environment() {
         exit 1
     fi
 
-    # Set read permissions for libvirt-qemu access
-    chmod 644 "${ISO_PATH}" || true
+    # Set read permissions for libvirt-qemu access if writable
+    chmod 644 "${ISO_PATH}" 2>/dev/null || true
 }
 
 check_existing_vm() {
@@ -76,6 +76,7 @@ launch_vm() {
         --ram "${RAM_MB}" \
         --vcpus "${VCPUS}" \
         --osinfo debian12 \
+        --import \
         --disk path="${ISO_PATH}",device=cdrom,readonly=on,boot.order=1 \
         --boot uefi \
         --network network=default,model=virtio \
