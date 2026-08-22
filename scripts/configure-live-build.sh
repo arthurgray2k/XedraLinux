@@ -9,7 +9,8 @@
 #   ~/XedraLinux/build/live-build with Xedra's exact specifications:
 #     - Base: Debian 13 "Trixie" (amd64)
 #     - Init System: SysVinit (sysvinit-core) via chroot hook
-#     - Desktop: X11 + Fluxbox + xterm
+#     - Desktop: X11 + Fluxbox + xterm + SPICE agent + xsetroot
+#     - Hardware/Input: udev + kmod + libinput
 #     - Kernel: linux-image-amd64 + live-boot
 #     - Bootloader: Hybrid UEFI + BIOS (GRUB + Syslinux)
 # ==============================================================================
@@ -36,7 +37,7 @@ print_header() {
     echo "Live-Build Workspace: ${LB_DIR}"
     echo "Distribution Base:    Debian 13 (Trixie) amd64"
     echo "Init System:          SysVinit (PID 1)"
-    echo "Desktop:              Fluxbox + xterm"
+    echo "Desktop:              Fluxbox + xterm + SPICE"
     echo ""
 }
 
@@ -86,35 +87,45 @@ configure_xedra_packages() {
     echo -e "${COLOR_BOLD}--- 2. Configuring Xedra Package Lists ---${COLOR_RESET}"
     mkdir -p "${LB_DIR}/config/package-lists"
 
-    # Core Xedra 0.1 Package List
+    # Complete Xedra 0.1 Package List
     cat << 'EOF' > "${LB_DIR}/config/package-lists/xedra.list.chroot"
 # Xedra 0.1 Core Package List
 
-# 1. Linux Kernel & Live Boot Infrastructure
+# 1. Linux Kernel & Hardware Device Subsystem
 linux-image-amd64
 live-boot
 live-config
+udev
+kmod
 
-# 2. Minimal Display Server & Window Manager
+# 2. Display Server, Window Manager & Input Drivers
 xserver-xorg-core
 xserver-xorg-video-all
+xserver-xorg-video-qxl
 xserver-xorg-input-all
+xserver-xorg-input-libinput
 xinit
 x11-xserver-utils
 x11-utils
 xauth
 fluxbox
 xterm
+spice-vdagent
 dbus-x11
 
-# 3. Essential System Utilities
-coreutils
-util-linux
-pciutils
-usbutils
+# 3. Session & Power Management (SysVinit-compatible)
+elogind
+libpam-elogind
+
+# 4. Networking & System Utilities
 iproute2
 iputils-ping
 dhcpcd-base
+net-tools
+pciutils
+usbutils
+coreutils
+util-linux
 procps
 nano
 vim-tiny
@@ -132,9 +143,6 @@ configure_sysvinit_hook() {
     # Clean old archives preferences if any
     rm -rf "${LB_DIR}/config/archives"
 
-    # In live-build, chroot hooks run inside the chroot during assembly.
-    # This allows an atomic apt-get transition to sysvinit-core without
-    # triggering live-build's pre-flight package conflict solver.
     cat << 'EOF' > "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
 #!/bin/sh
 set -e
@@ -146,6 +154,7 @@ apt-get install -y --no-install-recommends \
     sysvinit-core \
     initscripts \
     insserv \
+    orphan-sysvinit-scripts \
     live-config-sysvinit \
     systemd-sysv- \
     --allow-remove-essential
@@ -154,8 +163,8 @@ echo "=== [XEDRA HOOK] Setting default users and passwords ==="
 # Set root password to 'root'
 echo "root:root" | chpasswd
 
-# Create xedra live user with password 'xedra' and sudo privileges
-useradd -m -s /bin/bash -G sudo,audio,video,cdrom,plugdev,kvm xedra 2>/dev/null || true
+# Create xedra live user with password 'xedra' and input/audio/video privileges
+useradd -m -s /bin/bash -G sudo,audio,video,cdrom,plugdev,kvm,input xedra 2>/dev/null || true
 echo "xedra:xedra" | chpasswd
 
 # Grant passwordless sudo to xedra user
@@ -163,13 +172,35 @@ mkdir -p /etc/sudoers.d
 echo "xedra ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/xedra
 chmod 0440 /etc/sudoers.d/xedra
 
-# Ensure user directory ownership and xinitrc
-cp /etc/skel/.xinitrc /home/xedra/.xinitrc 2>/dev/null || true
-mkdir -p /home/xedra/.fluxbox
-cp /etc/skel/.fluxbox/menu /home/xedra/.fluxbox/menu 2>/dev/null || true
-chown -R xedra:xedra /home/xedra 2>/dev/null || true
+# Enable udev and essential SysVinit services
+update-rc.d udev defaults 2>/dev/null || true
+update-rc.d dbus defaults 2>/dev/null || true
+update-rc.d elogind defaults 2>/dev/null || true
 
-echo "=== [XEDRA HOOK] SysVinit installed; credentials configured ==="
+# Configure auto-startx on tty1 for xedra user
+cat << 'PROFILE_EOF' > /home/xedra/.profile
+# ~/.profile: executed by Bourne-compatible login shells
+if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    exec startx
+fi
+PROFILE_EOF
+chown xedra:xedra /home/xedra/.profile
+
+# Configure networking interfaces for automatic DHCP
+cat << 'NET_EOF' > /etc/network/interfaces
+# Loopback network interface
+auto lo
+iface lo inet loopback
+
+# Ethernet interfaces with automatic DHCP
+allow-hotplug eth0
+iface eth0 inet dhcp
+
+allow-hotplug enp1s0
+iface enp1s0 inet dhcp
+NET_EOF
+
+echo "=== [XEDRA HOOK] SysVinit installed; input & users configured ==="
 EOF
 
     chmod +x "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
@@ -181,6 +212,7 @@ configure_chroot_overlays() {
     echo -e "${COLOR_BOLD}--- 4. Installing Xedra Overlay Configurations ---${COLOR_RESET}"
     mkdir -p "${LB_DIR}/config/includes.chroot/etc/skel/.fluxbox"
     mkdir -p "${LB_DIR}/config/includes.chroot/root/.fluxbox"
+    mkdir -p "${LB_DIR}/config/includes.chroot/home/xedra/.fluxbox"
 
     # Copy inittab
     if [[ -f "${CONFIG_DIR}/inittab" ]]; then
@@ -192,8 +224,10 @@ configure_chroot_overlays() {
     if [[ -f "${CONFIG_DIR}/xinitrc" ]]; then
         cp "${CONFIG_DIR}/xinitrc" "${LB_DIR}/config/includes.chroot/etc/skel/.xinitrc"
         cp "${CONFIG_DIR}/xinitrc" "${LB_DIR}/config/includes.chroot/root/.xinitrc"
+        cp "${CONFIG_DIR}/xinitrc" "${LB_DIR}/config/includes.chroot/home/xedra/.xinitrc"
         chmod 755 "${LB_DIR}/config/includes.chroot/etc/skel/.xinitrc"
         chmod 755 "${LB_DIR}/config/includes.chroot/root/.xinitrc"
+        chmod 755 "${LB_DIR}/config/includes.chroot/home/xedra/.xinitrc"
         echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] .xinitrc overlay added"
     fi
 
@@ -201,19 +235,20 @@ configure_chroot_overlays() {
     if [[ -f "${CONFIG_DIR}/fluxbox/menu" ]]; then
         cp "${CONFIG_DIR}/fluxbox/menu" "${LB_DIR}/config/includes.chroot/etc/skel/.fluxbox/menu"
         cp "${CONFIG_DIR}/fluxbox/menu" "${LB_DIR}/config/includes.chroot/root/.fluxbox/menu"
+        cp "${CONFIG_DIR}/fluxbox/menu" "${LB_DIR}/config/includes.chroot/home/xedra/.fluxbox/menu"
         echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Fluxbox menu overlay added"
     fi
 
-    # Configure auto-login for live session (SysVinit auto-login hook)
+    # Configure auto-login for live session
     mkdir -p "${LB_DIR}/config/includes.chroot/etc/live/config.conf.d"
     cat << 'EOF' > "${LB_DIR}/config/includes.chroot/etc/live/config.conf.d/xedra.conf"
 LIVE_HOSTNAME="xedra"
-LIVE_USERNAME="user"
-LIVE_USER_DEFAULT_GROUPS="sudo,audio,video,cdrom,plugdev,kvm"
+LIVE_USERNAME="xedra"
+LIVE_USER_DEFAULT_GROUPS="sudo,audio,video,cdrom,plugdev,kvm,input"
 LIVE_CONFIG_NOAUTOLOGIN="false"
 EOF
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Live configuration hooks added (/etc/live/config.conf.d/xedra.conf)"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Live configuration hooks added"
     echo ""
 }
 
@@ -227,7 +262,7 @@ verify_configuration() {
     echo -e "${COLOR_BOLD}${COLOR_GREEN}  live-build Workspace Successfully Configured!        ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
     echo ""
-    echo "Next Step (Stage 8): Compile the bootable Xedra 0.1 ISO using:"
+    echo "Next Step: Compile the bootable Xedra 0.1 ISO using:"
     echo "  sudo ./scripts/build-iso.sh"
     echo ""
 }
