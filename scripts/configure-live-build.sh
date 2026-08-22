@@ -90,17 +90,16 @@ configure_xedra_packages() {
     cat << 'EOF' > "${LB_DIR}/config/package-lists/xedra.list.chroot"
 # Xedra 0.1 Core Package List
 
-# 1. Linux Kernel & Live Boot Infrastructure
+# 1. Init System (SysVinit prioritized as PID 1)
+sysvinit-core
+initscripts
+insserv
+
+# 2. Linux Kernel & Live Boot Infrastructure
 linux-image-amd64
 live-boot
 live-config
 live-config-sysvinit
-
-# 2. Init System (SysVinit as PID 1)
-sysvinit-core
-initscripts
-insserv
-orphan-sysvinit-scripts
 
 # 3. Minimal Display Server & Window Manager
 xserver-xorg-core
@@ -133,17 +132,22 @@ EOF
 }
 
 configure_systemd_exclusion() {
-    echo -e "${COLOR_BOLD}--- 3. Configuring APT Exclusion for systemd-sysv ---${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}--- 3. Configuring APT Pinning for SysVinit ---${COLOR_RESET}"
     mkdir -p "${LB_DIR}/config/archives"
 
-    # Set APT pinning to strictly forbid systemd-sysv from entering the build
-    cat << 'EOF' > "${LB_DIR}/config/archives/nosystemd.pref.chroot"
+    # Prioritize sysvinit-core (Pin-Priority: 1001) so APT satisfies all virtual init
+    # dependencies with sysvinit-core rather than systemd-sysv
+    cat << 'EOF' > "${LB_DIR}/config/archives/sysvinit.pref.chroot"
+Package: sysvinit-core
+Pin: release *
+Pin-Priority: 1001
+
 Package: systemd-sysv
 Pin: release *
-Pin-Priority: -1
+Pin-Priority: 1
 EOF
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] APT pinning configured to exclude systemd-sysv (Priority: -1)"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] APT pinning configured (sysvinit-core Priority: 1001)"
     echo ""
 }
 
@@ -198,7 +202,7 @@ verify_configuration() {
     echo -e "${COLOR_BOLD}${COLOR_GREEN}======================================================${COLOR_RESET}"
     echo ""
     echo "Next Step (Stage 8): Compile the bootable Xedra 0.1 ISO using:"
-    echo "  sudo lb build"
+    echo "  sudo ./scripts/build-iso.sh"
     echo ""
 }
 

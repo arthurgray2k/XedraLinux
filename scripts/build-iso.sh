@@ -50,6 +50,8 @@ verify_environment() {
         echo "Please run Step 07 first: ./scripts/configure-live-build.sh" >&2
         exit 1
     fi
+
+    mkdir -p "${OUTPUT_DIR}"
 }
 
 compile_iso() {
@@ -59,6 +61,10 @@ compile_iso() {
     echo ""
 
     cd "${LB_DIR}"
+    # Clean previous interrupted builds if any
+    lb clean --binary 2>/dev/null || true
+    
+    # Run the build
     lb build
 
     echo ""
@@ -77,7 +83,6 @@ package_artifacts() {
     elif [[ -f "${LB_DIR}/live-image-amd64.iso" ]]; then
         generated_iso="${LB_DIR}/live-image-amd64.iso"
     else
-        # Find any .iso in LB_DIR
         generated_iso="$(find "${LB_DIR}" -maxdepth 1 -name "*.iso" | head -n 1)"
     fi
 
