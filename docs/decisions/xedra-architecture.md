@@ -74,3 +74,11 @@ This document records the foundational technical decisions for Xedra Linux, expl
 
 - **Decision**: License Xedra's original build tooling and scripts under **GPL-3.0-or-later**, documentation under **CC BY-SA 4.0**, and preserve upstream licenses for all Debian/Linux components.
 - **Reason**: Ensures open-source copyleft protection for Xedra tooling while strictly honoring upstream copyright and licensing.
+
+---
+
+## 8. Distribution Delivery & Installation Model
+
+- **Decision**: Package Xedra 0.1 primarily as an ephemeral **Live Hybrid ISO** (squashfs + RAM overlayfs), with permanent disk installer capabilities scheduled for Milestone 0.2+.
+- **Reason**: A Live ISO provides immediate, non-destructive testability across virtual and bare-metal environments without disk partitioning risks. The underlying rootfs remains 100% standard and installable to disk via direct UNIX copy or future automated installers (Calamares / `xedra-installer`).
+- **Verdict**: **Live ISO First** for Milestone 0.1; **Automated Installers** in Milestones 0.2+.
