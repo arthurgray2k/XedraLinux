@@ -7,28 +7,16 @@ This document tracks technical insights, practical lessons, encountered challeng
 ## Stage 1 - Host Environment & Virtualization Validation
 
 - **Status**: `Verified`
-- **Focus**: Validating the Linux Mint host machine for hypervisor readiness without modifying the host OS.
+- **Focus**: Validating the non-Debian Linux host machine for hypervisor readiness without modifying the host OS.
 
 ### What Was Learned:
-1. **Host Immutability**: The physical machine running Linux Mint is strictly the development workstation. Debian is never installed directly on host metal to protect the working environment.
+1. **Host Immutability**: The physical machine is strictly the development workstation. Debian is never installed directly on host metal to protect the working environment.
 2. **KVM Virtualization Pipeline**:
    - Hardware CPU extensions (`VMX` for Intel, `SVM` for AMD) allow near-native virtualization speeds via hardware acceleration.
    - The Linux kernel module `kvm_intel` exposes the character device node `/dev/kvm`.
    - QEMU (`qemu-system-x86_64`) acts as the userland machine emulator and connects to `/dev/kvm` via ioctl calls.
    - `libvirt` provides a unified daemon API (`libvirtd`) and management CLI (`virsh`) used by `virt-manager`.
 3. **Safety Automation**: Using `set -euo pipefail` in inspection scripts ensures that command failures and unset variables halt execution immediately before any side effects occur.
-
-### Key Commands:
-```bash
-# Verify KVM hardware support
-grep -E '(vmx|svm)' /proc/cpuinfo
-
-# Test libvirt daemon connectivity
-virsh --connect qemu:///system list --all
-
-# Run host check
-./scripts/check-host.sh
-```
 
 ---
 
@@ -39,7 +27,7 @@ virsh --connect qemu:///system list --all
 
 ### What Was Learned & Challenges Encountered:
 1. **Container Userspace vs. Kernel**:
-   - A container shares the Linux Mint host kernel (`7.0.0-28-generic`).
+   - A container shares the host kernel.
    - The container provides an isolated Debian *userspace* via Linux namespaces (mount, PID, network, user).
 2. **The `mknod` & Mount Limitation in Rootless Containers**:
    - Standard `debootstrap` executes `check_sane_mount()`, which calls `mknod "$TARGET/test-dev-null" c 1 3`.
@@ -54,7 +42,7 @@ virsh --connect qemu:///system list --all
 
 ## Stage 3 - Debian Builder VM Setup (`xedra-builder`)
 
-- **Status**: `Implemented & Verified on Host`
+- **Status**: `Verified & Complete`
 - **Focus**: Setting up a dedicated Debian 13 (Trixie) VM as the authoritative build environment on libvirt/KVM.
 
 ### What Was Learned:
@@ -64,23 +52,19 @@ virsh --connect qemu:///system list --all
 2. **UEFI Virtual Machine Automation**:
    - Using `virt-install` with `--boot uefi`, `--osinfo debian12`, `--graphics spice`, and `--disk pool=default,size=35,format=qcow2,bus=virtio` creates a fully reproducible, hardware-accelerated Debian development VM.
 3. **Git as the Sole Source of Truth**:
-   - Both the Linux Mint host and the `xedra-builder` VM synchronize via `~/XedraLinux` through Git (`https://github.com/arthurgray2k/XedraLinux`).
-
-### Key Commands:
-```bash
-# Validate host for builder VM creation
-./scripts/vm/check-builder-vm-host.sh /path/to/debian-13-netinst.iso
-
-# Create the xedra-builder VM
-./scripts/vm/create-builder-vm.sh /path/to/debian-13-netinst.iso
-
-# Inside the VM: Bootstrap the build toolchain
-sudo ~/XedraLinux/scripts/vm/bootstrap-builder.sh
-```
+   - Both the host system and the `xedra-builder` VM synchronize via `~/XedraLinux` through Git (`https://github.com/arthurgray2k/XedraLinux`).
 
 ---
 
 ## Stage 4 - First Debian Root Filesystem
 
-- **Status**: `Planned (Inside xedra-builder VM)`
+- **Status**: `Verified & Complete`
 - **Focus**: Natively bootstrapping the pure Debian 13 base rootfs inside the dedicated builder VM.
+
+### What Was Learned:
+1. **Hermetic Rootfs Generation**:
+   - Bootstrapping directly from pristine upstream repositories ensures zero leakage of local build-machine state, credentials, or caches.
+2. **Merged-/usr Layout**:
+   - In modern Debian 13 (Trixie), `/bin`, `/sbin`, and `/lib` are symbolic links pointing into `/usr/bin`, `/usr/sbin`, and `/usr/lib`.
+3. **Upstream Init Baseline**:
+   - Default debootstrap installs 146 base packages with `systemd-sysv` providing `/sbin/init`. In Stage 5, we transition this baseline to SysVinit (`sysvinit-core`).
