@@ -6,8 +6,8 @@ Xedra Linux development uses a clean, reproducible architecture separating the d
 
 ```text
 +-------------------------------------------------------------------------------+
-|                      1. NON-DEBIAN LINUX HOST (PHYSICAL)                      |
-|  - Physical workstation OS: Non-Debian Linux host (x86_64)                    |
+|                            1. LINUX HOST (PHYSICAL)                           |
+|  - Physical workstation OS: Linux Host (x86_64)                               |
 |  - Manages host hypervisor (libvirt, QEMU/KVM) & Git repository               |
 |  - Source tree at ~/XedraLinux (https://github.com/arthurgray2k/XedraLinux)   |
 |  - Unmodified: Host bootloader, kernel, and package trees are NEVER altered   |
@@ -40,7 +40,7 @@ Xedra Linux development uses a clean, reproducible architecture separating the d
 
 | Layer | Environment | Purpose | Modifies Physical Host? |
 | :--- | :--- | :--- | :--- |
-| **Development Host** | Non-Debian Linux host (`x86_64`) | Physical workstation, IDE, Git, VM orchestration | **No** |
+| **Development Host** | Linux Host (`x86_64`) | Physical workstation, IDE, Git, VM orchestration | **No** |
 | **Builder VM (`xedra-builder`)** | Debian 13 Trixie (amd64) | Authoritative OS build environment with full Linux kernel capabilities for `debootstrap` and `live-build` | **No** (Isolated in virtual disk) |
 | **Target Xedra 0.1** | Debian 13 Base (amd64) | Minimal distribution under construction (SysVinit, Fluxbox, xterm, X11) | N/A (Emitted as ISO) |
 | **Testing VM (`xedra-lab`)** | Virtualized Hardware (UEFI) | Disposable hardware testbed for booting and verifying Xedra ISOs | **No** (Disposable virtual disk) |

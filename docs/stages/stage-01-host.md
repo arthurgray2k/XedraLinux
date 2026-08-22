@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-Validate that the physical development machine (non-Debian Linux host) satisfies all prerequisite hardware, virtualization, and tooling requirements for Xedra Linux engineering and VM-based testing, without modifying the host operating system.
+Validate that the physical development machine (Linux host) satisfies all prerequisite hardware, virtualization, and tooling requirements for Xedra Linux engineering and VM-based testing, without modifying the host operating system.
 
 ---
 
@@ -15,7 +15,7 @@ Validate that the physical development machine (non-Debian Linux host) satisfies
 
 ## 3. Host Environment Specifications
 
-- **Operating System**: Non-Debian Linux host (`x86_64`)
+- **Operating System**: Linux host (`x86_64`)
 - **Host Kernel**: `7.0.0-28-generic`
 - **CPU Virtualization**: Intel VT-x (`VMX` hardware extension detected)
 - **Virtualization Device**: `/dev/kvm` (accessible with RW permissions)
@@ -91,7 +91,7 @@ cd ~/XedraLinux
 Inspecting host system configuration, virtualization, and build prerequisites...
 
 --- Host System & Architecture ---
-  [ AVAILABLE        ] Host OS -> Non-Debian Linux host (x86_64)
+  [ AVAILABLE        ] Host OS -> Linux host (x86_64)
   [ AVAILABLE        ] Host Architecture -> x86_64 (amd64 compatible)
   [ AVAILABLE        ] Host Kernel -> 7.0.0-28-generic
 

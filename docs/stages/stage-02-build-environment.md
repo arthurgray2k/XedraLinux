@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-Establish an isolated, clean Debian 13 "Trixie" build environment using Podman on the non-Debian Linux host. This ensures that all Xedra distribution construction tooling operates in pure Debian userland without contaminating the host system.
+Establish an isolated, clean Debian 13 "Trixie" build environment using Podman on the Linux host. This ensures that all Xedra distribution construction tooling operates in pure Debian userland without contaminating the host system.
 
 ---
 
@@ -19,7 +19,7 @@ Establish an isolated, clean Debian 13 "Trixie" build environment using Podman o
 ## 3. Host & Container Architecture
 
 ```text
-Non-Debian Linux Host (x86_64)
+Linux Host (x86_64)
    │
    ├── Podman 4.9.3 (Rootless, daemonless OCI engine)
    │       │

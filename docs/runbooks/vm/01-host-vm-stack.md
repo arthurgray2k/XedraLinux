@@ -10,7 +10,7 @@ This step performs **read-only verification**. It does not create VMs, format di
 
 ## Preconditions
 
-1. You are logged into the physical non-Debian Linux host system as a regular user with `sudo` privileges.
+1. You are logged into the physical Linux host system as a regular user with `sudo` privileges.
 2. The user is a member of the `libvirt` and `kvm` groups.
 3. The Xedra repository is available at `~/XedraLinux`.
 4. A Debian 13 "Trixie" `amd64` Netinst ISO has been downloaded to the host system.

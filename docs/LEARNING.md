@@ -7,7 +7,7 @@ This document tracks technical insights, practical lessons, encountered challeng
 ## Stage 1 - Host Environment & Virtualization Validation
 
 - **Status**: `Verified`
-- **Focus**: Validating the non-Debian Linux host machine for hypervisor readiness without modifying the host OS.
+- **Focus**: Validating the physical Linux host machine for hypervisor readiness without modifying the host OS.
 
 ### What Was Learned:
 1. **Host Immutability**: The physical machine is strictly the development workstation. Debian is never installed directly on host metal to protect the working environment.

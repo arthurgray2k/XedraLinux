@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-Create a dedicated, reproducible Debian 13 "Trixie" virtual machine (`xedra-builder`) on the non-Debian Linux host via libvirt/QEMU/KVM. This VM serves as the authoritative, uncompromised distribution engineering environment with full Linux kernel capabilities for `debootstrap`, `live-build`, loop mounts, and ISO assembly.
+Create a dedicated, reproducible Debian 13 "Trixie" virtual machine (`xedra-builder`) on the Linux host via libvirt/QEMU/KVM. This VM serves as the authoritative, uncompromised distribution engineering environment with full Linux kernel capabilities for `debootstrap`, `live-build`, loop mounts, and ISO assembly.
 
 ---
 

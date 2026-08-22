@@ -169,19 +169,19 @@ In accordance with project policy, **no scripts are deleted or moved during this
 
 | Script | Classification | Primary Environment | Status |
 | :--- | :--- | :--- | :--- |
-| `scripts/check-host.sh` | `ACTIVE` | Non-Debian Linux Host | Maintained |
-| `scripts/check-container-runtime.sh` | `HISTORICAL` | Non-Debian Linux Host | Preserved |
-| `scripts/build-builder-image.sh` | `HISTORICAL` | Non-Debian Linux Host | Preserved |
+| `scripts/check-host.sh` | `ACTIVE` | Linux Host | Maintained |
+| `scripts/check-container-runtime.sh` | `HISTORICAL` | Linux Host | Preserved |
+| `scripts/build-builder-image.sh` | `HISTORICAL` | Linux Host | Preserved |
 | `scripts/check-builder.sh` | `HISTORICAL` | Container | Preserved |
-| `scripts/enter-builder.sh` | `HISTORICAL` | Non-Debian Linux Host | Preserved |
+| `scripts/enter-builder.sh` | `HISTORICAL` | Linux Host | Preserved |
 | `scripts/bootstrap-rootfs.sh` | `HISTORICAL` | Container | Preserved |
 | `scripts/complete-rootfs.sh` | `HISTORICAL` | Container | Preserved |
 | `scripts/inspect-rootfs.sh` | `ACTIVE` | Builder VM / Host | Maintained |
 | `scripts/enter-rootfs.sh` | `ACTIVE` | Builder VM | Maintained |
-| `scripts/vm/check-builder-vm-host.sh` | `ACTIVE` | Non-Debian Linux Host | Maintained |
-| `scripts/vm/create-builder-vm.sh` | `ACTIVE` | Non-Debian Linux Host | Maintained |
-| `scripts/vm/start-builder-vm.sh` | `ACTIVE` | Non-Debian Linux Host | Maintained |
-| `scripts/vm/stop-builder-vm.sh` | `ACTIVE` | Non-Debian Linux Host | Maintained |
-| `scripts/vm/inspect-builder-vm.sh` | `ACTIVE` | Non-Debian Linux Host | Maintained |
-| `scripts/vm/destroy-builder-vm.sh` | `ACTIVE` | Non-Debian Linux Host | Maintained |
+| `scripts/vm/check-builder-vm-host.sh` | `ACTIVE` | Linux Host | Maintained |
+| `scripts/vm/create-builder-vm.sh` | `ACTIVE` | Linux Host | Maintained |
+| `scripts/vm/start-builder-vm.sh` | `ACTIVE` | Linux Host | Maintained |
+| `scripts/vm/stop-builder-vm.sh` | `ACTIVE` | Linux Host | Maintained |
+| `scripts/vm/inspect-builder-vm.sh` | `ACTIVE` | Linux Host | Maintained |
+| `scripts/vm/destroy-builder-vm.sh` | `ACTIVE` | Linux Host | Maintained |
 | `scripts/vm/bootstrap-builder.sh` | `ACTIVE` | Builder VM (`xedra-builder`) | Maintained |

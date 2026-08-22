@@ -5,7 +5,7 @@ Xedra is a small, educational Debian-based Linux distribution engineered from fi
 ## Core Environments
 
 ```text
-Non-Debian Linux Host (Physical Workstation)
+Linux Host (Physical Workstation)
      │
      ├── libvirt / QEMU/KVM
      │     │
@@ -20,7 +20,7 @@ Non-Debian Linux Host (Physical Workstation)
      └── Source Repository: ~/XedraLinux
 ```
 
-- **Development Host**: Non-Debian Linux host (`x86_64`) — Physical workstation; manages Git and hypervisor.
+- **Development Host**: Linux Host (`x86_64`) — Physical workstation; manages Git and hypervisor.
 - **Authoritative Builder VM (`xedra-builder`)**: Debian 13 Trixie (`amd64`, UEFI, 4 GB RAM, 35 GB Disk) — Houses the complete build toolchain.
 - **Target Xedra 0.1**: Minimal distribution (Debian 13 base, SysVinit PID 1, X11, Fluxbox, xterm).
 - **Test VM (`xedra-lab`)**: Disposable libvirt VM (2 vCPU, 2 GB RAM, UEFI) — Boots and tests the output ISO.
