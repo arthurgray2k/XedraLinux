@@ -8,12 +8,13 @@ if [ -f "$HOME/.Xresources" ]; then
     xrdb -merge "$HOME/.Xresources"
 fi
 
-# 2. Set comfortable default display resolution (1366x768 / 1280x800 ~30% larger than 1024x768)
+# 2. Set wide horizontal KVM display resolution (1600x900 / 1440x900 for optimal virt-manager window size)
 if command -v xrandr >/dev/null 2>&1; then
     PRIMARY_DISP="$(xrandr | grep ' connected' | awk '{print $1}' | head -n 1)"
     if [ -n "$PRIMARY_DISP" ]; then
+        xrandr --output "$PRIMARY_DISP" --mode 1600x900 2>/dev/null || \
+        xrandr --output "$PRIMARY_DISP" --mode 1440x900 2>/dev/null || \
         xrandr --output "$PRIMARY_DISP" --mode 1366x768 2>/dev/null || \
-        xrandr --output "$PRIMARY_DISP" --mode 1280x800 2>/dev/null || \
         xrandr --output "$PRIMARY_DISP" --mode 1280x720 2>/dev/null || true
     fi
 fi

@@ -1,11 +1,16 @@
-# Xedra Linux - Minimal Fluxbox Root Menu
-[begin] (Xedra Linux 0.1)
+# Xedra Linux - Fluxbox Root Menu (v0.3)
+[begin] (Xedra Linux 0.3)
   [exec] (Terminal) {xterm -bg black -fg white -fa 'Monospace' -fs 11}
   [separator]
   [submenu] (System Tools)
     [exec] (Process Monitor) {xterm -e top}
     [exec] (Disk Space) {xterm -hold -e df -h}
     [exec] (Network Info) {xterm -hold -e ip addr}
+  [end]
+  [separator]
+  [submenu] (Power Options)
+    [exec] (Shutdown VM) {sudo poweroff}
+    [exec] (Reboot VM) {sudo reboot}
   [end]
   [separator]
   [restart] (Restart Fluxbox)
