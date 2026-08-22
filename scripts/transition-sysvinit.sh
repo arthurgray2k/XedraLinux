@@ -6,8 +6,9 @@
 #
 # Purpose:
 #   Configures the target Debian 13 rootfs to use SysVinit ('sysvinit-core') as
-#   PID 1. Purges 'systemd-sysv', installs standard SysVinit initscripts, and
-#   installs /etc/inittab, fulfilling Xedra ADR #2.
+#   PID 1. Replaces 'systemd-sysv' in an atomic APT transaction, installs
+#   standard SysVinit initscripts, and installs /etc/inittab, fulfilling
+#   Xedra ADR #2.
 #
 # Safety:
 #   - Runs inside the 'xedra-builder' VM against ~/XedraLinux/build/rootfs.
@@ -65,10 +66,11 @@ mount_pseudo_filesystems() {
     echo -e "${COLOR_BOLD}--- 1. Binding Pseudo-Filesystems into Rootfs ---${COLOR_RESET}"
     mkdir -p "${ROOTFS_DIR}/proc" "${ROOTFS_DIR}/sys" "${ROOTFS_DIR}/dev" "${ROOTFS_DIR}/dev/pts"
     
-    mount -t proc proc "${ROOTFS_DIR}/proc"
-    mount -t sysfs sysfs "${ROOTFS_DIR}/sys"
-    mount --bind /dev "${ROOTFS_DIR}/dev"
-    mount -t devpts devpts "${ROOTFS_DIR}/dev/pts"
+    # Mount only if not already mounted
+    if ! mountpoint -q "${ROOTFS_DIR}/proc"; then mount -t proc proc "${ROOTFS_DIR}/proc"; fi
+    if ! mountpoint -q "${ROOTFS_DIR}/sys"; then mount -t sysfs sysfs "${ROOTFS_DIR}/sys"; fi
+    if ! mountpoint -q "${ROOTFS_DIR}/dev"; then mount --bind /dev "${ROOTFS_DIR}/dev"; fi
+    if ! mountpoint -q "${ROOTFS_DIR}/dev/pts"; then mount -t devpts devpts "${ROOTFS_DIR}/dev/pts"; fi
 
     trap 'cleanup_mounts "${ROOTFS_DIR}"' EXIT INT TERM
     echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] /proc, /sys, /dev, /dev/pts mounted"
@@ -88,22 +90,22 @@ EOF
     # Prevent interactive debconf questions
     export DEBIAN_FRONTEND=noninteractive
 
-    # Update package lists and install SysVinit packages
+    # Update package lists inside rootfs
     echo "Updating package lists inside rootfs..."
     chroot "${ROOTFS_DIR}" apt-get update
 
-    echo "Installing sysvinit-core and related utilities..."
+    # In APT, appending a minus sign ('systemd-sysv-') explicitly tells the solver
+    # to remove systemd-sysv while installing sysvinit-core in an atomic transaction.
+    echo "Atomic replacement: Installing sysvinit-core and removing systemd-sysv..."
     chroot "${ROOTFS_DIR}" apt-get install -y --no-install-recommends \
         sysvinit-core \
         initscripts \
-        insserv
+        insserv \
+        systemd-sysv- \
+        --allow-remove-essential
 
     # Install orphan-sysvinit-scripts if available in Trixie
     chroot "${ROOTFS_DIR}" apt-get install -y --no-install-recommends orphan-sysvinit-scripts 2>/dev/null || true
-
-    # Explicitly remove systemd-sysv package (the provider of systemd /sbin/init)
-    echo "Removing systemd-sysv..."
-    chroot "${ROOTFS_DIR}" apt-get purge -y systemd-sysv || true
 
     echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] SysVinit packages installed and systemd-sysv purged"
     echo ""
