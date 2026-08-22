@@ -78,9 +78,23 @@ This document tracks technical insights, practical lessons, encountered challeng
 
 ### What Was Learned:
 1. **APT Atomic Package Replacement (`systemd-sysv-`)**:
-   - When substituting essential system components, APT requires explicit syntax to resolve conflicting package decisions.
    - Appending a minus sign (`pkg-`) instructs APT to remove the conflicting package in the exact same transaction as installing its replacement.
 2. **PID 1 Transition**:
    - `/sbin/init` was transitioned from a symlink to systemd into a direct SysVinit executable binary (~53 KB).
 3. **Inittab Runlevels**:
    - SysVinit uses `/etc/inittab` to orchestrate system runlevels (default runlevel 2 for multi-user mode, `rcS` for boot scripts, and gettys on `tty1`–`tty6`).
+
+---
+
+## Stage 6 - Minimal Graphical Desktop (X11 + Fluxbox + xterm)
+
+- **Status**: `Verified & Complete`
+- **Focus**: Installing and configuring the minimal X11 display server, Fluxbox window manager, and xterm terminal.
+
+### What Was Learned:
+1. **X11 Graphics Stack Footprint**:
+   - While Fluxbox is only ~3 MB, the hardware graphics acceleration stack (Mesa, DRI drivers, and Xorg core) accounts for ~300 MB uncompressed, which compresses down to ~80 MB with `mksquashfs`.
+2. **Update-Alternatives Integration**:
+   - Debian automatically registered `startfluxbox` as the system's default `x-window-manager`.
+3. **Skeleton Configuration**:
+   - Placing `.xinitrc` and `.fluxbox/menu` in `/etc/skel/` ensures every new user inherits the minimal Xedra desktop environment.
