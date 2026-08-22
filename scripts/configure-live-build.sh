@@ -54,13 +54,13 @@ prepare_workspace() {
     mkdir -p "${LB_DIR}"
     cd "${LB_DIR}"
 
-    # Clean any previous build artifacts completely
+    # Clean intermediate build stages but PRESERVE local package cache (cache/)
     if [[ -d "${LB_DIR}/config" ]]; then
-        echo "Purging previous live-build config and chroot..."
-        lb clean --purge 2>/dev/null || true
+        echo "Cleaning previous live-build state (preserving package cache)..."
+        lb clean --binary --chroot 2>/dev/null || true
     fi
 
-    # Run lb config with explicit parameters
+    # Run lb config with explicit package caching enabled
     echo "Executing 'lb config'..."
     lb config \
         --distribution trixie \
@@ -72,15 +72,18 @@ prepare_workspace() {
         --mirror-binary "https://deb.debian.org/debian" \
         --linux-packages "linux-image" \
         --linux-flavours "amd64" \
-        --iso-application "Xedra Linux 0.1" \
+        --iso-application "Xedra Linux 0.2" \
         --iso-publisher "Xedra Linux Project" \
-        --iso-volume "XEDRA_0_1" \
+        --iso-volume "XEDRA_0_2" \
         --system live \
+        --cache true \
+        --cache-packages true \
+        --cache-stages "bootstrap chroot" \
         --bootappend-live "boot=live components hostname=xedra username=xedra quiet" \
         --apt-recommends false \
         --verbose
 
-    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Base live-build configuration generated (persistent cache enabled)"
     echo ""
 }
 
@@ -101,6 +104,7 @@ kmod
 
 # 2. Display Server, Window Manager & Input Drivers
 xserver-xorg-core
+xserver-xorg-legacy
 xserver-xorg-video-all
 xserver-xorg-video-qxl
 xserver-xorg-input-all
@@ -163,7 +167,7 @@ echo "=== [XEDRA HOOK] Setting default users and passwords ==="
 echo "root:root" | chpasswd
 
 # Create xedra live user with password 'xedra' and input/audio/video privileges
-useradd -m -s /bin/bash -G sudo,audio,video,cdrom,plugdev,kvm,input xedra 2>/dev/null || true
+useradd -m -s /bin/bash -G sudo,audio,video,cdrom,plugdev,kvm,input,tty xedra 2>/dev/null || true
 echo "xedra:xedra" | chpasswd
 
 # Grant passwordless sudo to xedra user
@@ -176,11 +180,11 @@ update-rc.d udev defaults 2>/dev/null || true
 update-rc.d dbus defaults 2>/dev/null || true
 update-rc.d elogind defaults 2>/dev/null || true
 
-# Configure auto-startx on tty1 for xedra user
+# Configure auto-startx on tty1 for xedra user directly on VT1
 cat << 'PROFILE_EOF' > /home/xedra/.profile
 # ~/.profile: executed by Bourne-compatible login shells
 if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
-    exec startx
+    exec startx -- vt1 -keeptty
 fi
 PROFILE_EOF
 chown xedra:xedra /home/xedra/.profile
@@ -212,6 +216,14 @@ configure_chroot_overlays() {
     mkdir -p "${LB_DIR}/config/includes.chroot/etc/skel/.fluxbox"
     mkdir -p "${LB_DIR}/config/includes.chroot/root/.fluxbox"
     mkdir -p "${LB_DIR}/config/includes.chroot/home/xedra/.fluxbox"
+    mkdir -p "${LB_DIR}/config/includes.chroot/etc/X11"
+
+    # Configure Xorg wrapper permissions for non-root console startx
+    cat << 'XWRAP_EOF' > "${LB_DIR}/config/includes.chroot/etc/X11/Xwrapper.config"
+# /etc/X11/Xwrapper.config: Allow non-root users to start X on active console
+allowed_users = console
+needs_root_rights = yes
+XWRAP_EOF
 
     # Copy inittab
     if [[ -f "${CONFIG_DIR}/inittab" ]]; then
@@ -238,7 +250,7 @@ configure_chroot_overlays() {
         echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Fluxbox menu overlay added"
     fi
 
-    # Install custom Xedra branding and ASCII issue banner
+    # Install custom Xedra 0.2 branding and ASCII issue banner
     cat << 'ISSUE_EOF' > "${LB_DIR}/config/includes.chroot/etc/issue"
  __  __          _           _     _                  
  \ \/ /___  __| |_ __ __ _  | |   (_)_ __  _   ___  __
@@ -246,7 +258,7 @@ configure_chroot_overlays() {
   /  \  __/ (_| | | | (_| | | |___| | | | | |_| |>  < 
  /_/\_\___|\__,_|_|  \__,_| |_____|_|_| |_|\__,_/_/\_\
 
- Xedra Linux 0.1 (amd64) — Genesis
+ Xedra Linux 0.2 (amd64) — Genesis
  Kernel \r on an \m (\l)
 
 ISSUE_EOF
@@ -256,11 +268,11 @@ ISSUE_EOF
     # Install custom Xedra /etc/os-release
     cat << 'OS_EOF' > "${LB_DIR}/config/includes.chroot/etc/os-release"
 NAME="Xedra Linux"
-PRETTY_NAME="Xedra Linux 0.1 (Genesis)"
+PRETTY_NAME="Xedra Linux 0.2 (Genesis)"
 ID=xedra
 ID_LIKE=debian
-VERSION="0.1"
-VERSION_ID="0.1"
+VERSION="0.2"
+VERSION_ID="0.2"
 VERSION_CODENAME=genesis
 HOME_URL="https://github.com/arthurgray2k/XedraLinux"
 SUPPORT_URL="https://github.com/arthurgray2k/XedraLinux/issues"

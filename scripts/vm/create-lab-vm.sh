@@ -25,7 +25,7 @@ RAM_MB=2048
 VCPUS=2
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-DEFAULT_ISO="${REPO_ROOT}/output/xedra-0.1-amd64.iso"
+DEFAULT_ISO="${REPO_ROOT}/output/xedra-0.2-amd64.iso"
 ISO_PATH="${1:-${DEFAULT_ISO}}"
 
 print_header() {
