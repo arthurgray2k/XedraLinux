@@ -3,7 +3,7 @@
   [exec] (Terminal) {xterm -bg black -fg white -fa 'Monospace' -fs 11}
   [exec] (Micro Editor) {xterm -title 'Micro Editor' -e micro}
   [separator]
-  [exec] (Install Xedra Linux) {xterm -title 'Xedra Linux Installer' -e sudo /usr/local/bin/xedra-installer}
+  [exec] (Install Xedra Linux) {xterm -title 'Xedra Linux Installer' -hold -e sudo /usr/local/bin/xedra-installer}
   [separator]
   [submenu] (System Tools)
     [exec] (Process Monitor) {xterm -e top}

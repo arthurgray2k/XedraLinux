@@ -58,18 +58,26 @@ select_target_disk() {
     done < <(lsblk -d -n -o NAME,SIZE,TYPE,MODEL)
 
     if [[ ${#disk_list[@]} -eq 0 ]]; then
-        echo -e "${COLOR_RED}Error: No suitable target storage disks found.${COLOR_RESET}" >&2
-        echo "Please ensure a virtual hard drive or physical SSD is attached." >&2
+        if command -v dialog >/dev/null 2>&1; then
+            dialog --clear \
+                --title "Xedra Linux Installer" \
+                --msgbox "No suitable target hard drive was found.\n\nPlease ensure a virtual hard disk (e.g. /dev/vda, /dev/sda) or physical drive is attached to install Xedra Linux onto." 10 60
+            clear
+        else
+            echo -e "${COLOR_RED}Error: No suitable target storage disks found.${COLOR_RESET}" >&2
+            echo "Please ensure a virtual hard drive or physical SSD is attached." >&2
+            read -rp "Press Enter to exit..."
+        fi
         exit 1
     fi
 
     if command -v dialog >/dev/null 2>&1; then
-        local chosen_disk
+        local chosen_disk=""
         chosen_disk=$(dialog --clear \
             --title "Xedra Linux Installer" \
             --menu "Select the target drive to install Xedra Linux onto:" 15 60 5 \
             "${disk_list[@]}" \
-            3>&1 1>&2 2>&3)
+            3>&1 1>&2 2>&3) || true
         TARGET_DISK="${chosen_disk}"
         clear
     else
@@ -80,12 +88,12 @@ select_target_disk() {
         echo ""
         read -rp "Enter choice [1-$(( ${#disk_list[@]} / 2 ))]: " choice
         local index=$(( (choice - 1) * 2 ))
-        TARGET_DISK="${disk_list[index]}"
+        TARGET_DISK="${disk_list[index]:-}"
     fi
 
     if [[ -z "${TARGET_DISK:-}" || ! -b "${TARGET_DISK}" ]]; then
-        echo -e "${COLOR_RED}Installation aborted: Invalid disk selection.${COLOR_RESET}"
-        exit 1
+        echo "Installation cancelled or invalid disk selection."
+        exit 0
     fi
 }
 

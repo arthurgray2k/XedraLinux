@@ -63,21 +63,22 @@ check_existing_vm() {
         echo -e "${COLOR_YELLOW}Warning: '${VM_NAME}' already exists.${COLOR_RESET}"
         echo "Destroying previous instance before creating a fresh test VM..."
         virsh --connect qemu:///system destroy "${VM_NAME}" >/dev/null 2>&1 || true
+        virsh --connect qemu:///system undefine "${VM_NAME}" --nvram --remove-all-storage >/dev/null 2>&1 || \
         virsh --connect qemu:///system undefine "${VM_NAME}" --nvram >/dev/null 2>&1 || true
     fi
 }
 
 launch_vm() {
-    echo -e "${COLOR_BOLD}--- Launching 'xedra-lab' with UEFI Firmware ---${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}--- Launching 'xedra-lab' with UEFI Firmware & 20GB Target Disk ---${COLOR_RESET}"
     
-    # Launch ephemeral UEFI VM with permanent CD-ROM boot priority #1
+    # Launch ephemeral UEFI VM with 20GB target hard drive and permanent CD-ROM boot priority #1
     virt-install \
         --connect qemu:///system \
         --name "${VM_NAME}" \
         --ram "${RAM_MB}" \
         --vcpus "${VCPUS}" \
         --osinfo debian12 \
-        --import \
+        --disk pool=default,size=20,format=qcow2,bus=virtio \
         --disk path="${ISO_PATH}",device=cdrom,readonly=on,boot.order=1 \
         --boot uefi \
         --network network=default,model=virtio \
