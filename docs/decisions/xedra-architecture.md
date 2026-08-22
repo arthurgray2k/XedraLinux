@@ -82,3 +82,11 @@ This document records the foundational technical decisions for Xedra Linux, expl
 - **Decision**: Package Xedra 0.1 primarily as an ephemeral **Live Hybrid ISO** (squashfs + RAM overlayfs), with permanent disk installer capabilities scheduled for Milestone 0.2+.
 - **Reason**: A Live ISO provides immediate, non-destructive testability across virtual and bare-metal environments without disk partitioning risks. The underlying rootfs remains 100% standard and installable to disk via direct UNIX copy or future automated installers (Calamares / `xedra-installer`).
 - **Verdict**: **Live ISO First** for Milestone 0.1; **Automated Installers** in Milestones 0.2+.
+
+---
+
+## 9. Declarative Configuration-Driven Build Manifest (Xedra 0.2+ Roadmap)
+
+- **Decision**: Evolve the build pipeline in Milestone 0.2+ to read declarative build manifests (e.g. `config/xedra-build.yaml` or `json`) supporting build profiles (`dev` fast-cache vs `release` full-purge).
+- **Reason**: Decouples build parameters (package sets, mirror URLs, cache policies, user credentials, branding) from procedural shell script logic, making builds fully reproducible and configurable without modifying code.
+- **Verdict**: **Procedural Scripts** for Milestone 0.1; **Declarative YAML/JSON Manifests** in Milestone 0.2+.
