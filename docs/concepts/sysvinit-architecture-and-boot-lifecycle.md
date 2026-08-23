@@ -260,7 +260,7 @@ exec fluxbox
        /  \  __/ (_| | | | (_| |   | |___| | | | | |_| |>  < 
       /_/\_\___|\__,_|_|  \__,_|   |_____|_|_| |_|\__,_/_/\_\
 
-     Xedra Linux 0.4.2 (amd64) — Genesis
+     Xedra Linux 0.4.3 (amd64) — Genesis
      Kernel \r on an \m (\l)
 ```
 

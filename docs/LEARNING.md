@@ -138,6 +138,24 @@ This document tracks technical insights, practical lessons, encountered challeng
    - In Debian 13 "Trixie", OpenSSH defaults `PasswordAuthentication` to disabled (`no`), requiring an explicit `/etc/ssh/sshd_config.d/01-xedra.conf` drop-in override (`PasswordAuthentication yes`) for password-based logins to function.
 3. **Super-Server (`openbsd-inetd`) Socket Mechanics in Non-Interactive Chroots**:
    - `telnetd` is not an independent daemon; it relies on `openbsd-inetd` parsing `/etc/inetd.conf`.
-   - In automated non-interactive `debootstrap`/`live-build` environments, `telnetd` does not automatically populate `/etc/inetd.conf`. The socket definition (`telnet stream tcp nowait root /usr/sbin/in.telnetd in.telnetd`) must be explicitly written during build configuration, or `inetd` will start with an empty config and refuse connections on TCP Port 23.
-4. **Mandatory 4-Point Daemon Audit**:
+   - In automated non-interactive `debootstrap`/`live-build` environments, `telnetd` does not automatically populate `/etc/inetd.conf`. The socket definition (`23 stream tcp nowait root /usr/sbin/telnetd telnetd`) must be explicitly written during build configuration, or `inetd` will start with an empty config and refuse connections on TCP Port 23.
+4. **Debian 13 Package Migration (`inetutils-telnetd`)**:
+   - In Debian 13 "Trixie", the daemon executable was transitioned from the legacy Netkit path `/usr/sbin/in.telnetd` to GNU Inetutils `/usr/sbin/telnetd`. Pointing `inetd.conf` to non-existent `/usr/sbin/in.telnetd` caused immediate socket closure upon connection.
+5. **Mandatory 4-Point Daemon Audit**:
    - Every added daemon must be traced for: (1) config file resolution, (2) TCP/UDP socket binding, (3) PAM authentication handshake, and (4) non-interactive batch installation safety.
+
+---
+
+## Stage 10 - Modern Developer CLI Suite & Productivity Engineering (Milestone 0.4.3)
+
+- **Status**: `Verified & Complete`
+- **Focus**: Expanding Xedra into a modern developer terminal powerhouse with `bat`, `fd-find`, `fzf`, `ripgrep`, `eza`, `zoxide`, `btop`, `jq`, `fastfetch`, and `where`.
+
+### What Was Learned & Architectural Solutions:
+1. **Debian Upstream Binary Renaming (`batcat` & `fdfind`)**:
+   - Debian renames `bat` $\rightarrow$ `batcat` and `fd` $\rightarrow$ `fdfind` to avoid namespace collisions with legacy packages (`bacula-console-qt` and `fd` floppy formatter).
+   - Solution: Injected local administrator symlinks `/usr/local/bin/bat` and `/usr/local/bin/fd`. Because `/usr/local/bin` precedes `/usr/bin` in `$PATH`, users can type `bat` and `fd` naturally without modifying package manager metadata or risking `dpkg` file collisions.
+2. **Cross-Platform `where` Discovery Helper**:
+   - Standard Linux lacks a standalone `where` binary. Injected `/usr/local/bin/where` wrapping `which -a "$@"`, allowing developers familiar with Windows/PowerShell/zsh to discover executable locations seamlessly.
+3. **Zero Daemon Overhead**:
+   - Audited the entire 10-package suite against Debian 13 "Trixie" dependencies (`main` repo). Zero packages require systemd or background sockets; total static memory footprint is 0 MB until executed.

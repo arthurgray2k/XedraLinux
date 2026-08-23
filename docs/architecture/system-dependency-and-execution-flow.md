@@ -1,6 +1,6 @@
 # Xedra Linux - System Dependency Hierarchy & Execution Flowcharts
 
-This document provides visual architectural diagrams, dependency hierarchies, and end-to-end execution flowcharts for Xedra Linux 0.4.2.
+This document provides visual architectural diagrams, dependency hierarchies, and end-to-end execution flowcharts for Xedra Linux 0.4.3.
 
 ---
 
@@ -91,7 +91,7 @@ flowchart TD
         SquashFS --> BinaryISO["6. lb binary_iso: xorriso & GRUB EFI hybrid mastering"]
     end
 
-    BinaryISO --> PackageArtifacts["Move to output/xedra-0.4.2-amd64.iso & generate .sha256"]
+    BinaryISO --> PackageArtifacts["Move to output/xedra-0.4.3-amd64.iso & generate .sha256"]
     PackageArtifacts --> Done(["ISO Ready for Testing in xedra-lab VM"])
 ```
 

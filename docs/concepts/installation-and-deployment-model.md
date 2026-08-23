@@ -127,7 +127,7 @@ virsh --connect qemu:///system change-media xedra-lab hda --eject --config --liv
 virsh --connect qemu:///system change-media xedra-lab sda --eject --config --live
 
 # OR Option 3 (Direct ISO Path):
-virsh --connect qemu:///system change-media xedra-lab /home/mint/XedraLinux/output/xedra-0.4.2-amd64.iso --eject --config --live
+virsh --connect qemu:///system change-media xedra-lab /home/mint/XedraLinux/output/xedra-0.4.3-amd64.iso --eject --config --live
 
 # Tip: To check your exact CD-ROM device target name, run:
 # virsh --connect qemu:///system domblklist xedra-lab

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Xedra Linux - Stage 7: Configure live-build for Xedra 0.4.2 ISO Generation
+# Xedra Linux - Stage 7: Configure live-build for Xedra 0.4.3 ISO Generation
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -48,12 +48,12 @@ done
 
 # Default variables
 DISTRO_NAME="Xedra Linux"
-DISTRO_VERSION="0.4.2"
+DISTRO_VERSION="0.4.3"
 DISTRO_CODENAME="genesis"
-ISO_VOLUME="XEDRA_0_4_2"
-ISO_APPLICATION="Xedra Linux 0.4.2"
+ISO_VOLUME="XEDRA_0_4_3"
+ISO_APPLICATION="Xedra Linux 0.4.3"
 ISO_PUBLISHER="Xedra Linux Project"
-ISO_NAME="xedra-0.4.2-amd64.iso"
+ISO_NAME="xedra-0.4.3-amd64.iso"
 CACHE_PACKAGES=true
 PURGE_ON_CLEAN=false
 DEBIAN_DISTRIBUTION="trixie"
@@ -75,10 +75,10 @@ import json
 with open('${JSON_CONFIG}') as f:
     d = json.load(f)
 p = d.get('profiles', {}).get('${BUILD_PROFILE}', d.get('profiles', {}).get('dev', {}))
-ver = d.get('distro', {}).get('version', '0.4.2')
+ver = d.get('distro', {}).get('version', '0.4.3')
 iso_name = p.get('iso_name', f'xedra-{ver}-amd64.iso')
-iso_vol = p.get('iso_volume', d.get('distro', {}).get('iso_volume', 'XEDRA_0_4_2'))
-iso_app = p.get('iso_application', d.get('distro', {}).get('iso_application', 'Xedra Linux 0.4.2'))
+iso_vol = p.get('iso_volume', d.get('distro', {}).get('iso_volume', 'XEDRA_0_4_3'))
+iso_app = p.get('iso_application', d.get('distro', {}).get('iso_application', 'Xedra Linux 0.4.3'))
 
 srv = d.get('services', {})
 prof_srv = p.get('services', {})
@@ -274,7 +274,7 @@ configure_xedra_packages() {
 
     # Core Package List for All Profiles (Kernel, Languages, Editors, Installer, CLI Tools)
     cat << 'EOF' > "${LB_DIR}/config/package-lists/xedra.list.chroot"
-# Xedra 0.4.2 Core Package List
+# Xedra 0.4.3 Core Package List
 
 # 1. Linux Kernel & Hardware Device Subsystem
 linux-image-amd64
@@ -292,7 +292,18 @@ micro
 nano
 vim-tiny
 
-# 3. Native Disk Installer & Filesystem Utilities
+# 3. Modern CLI Utilities & Developer Productivity
+bat
+fd-find
+fzf
+ripgrep
+eza
+zoxide
+btop
+jq
+fastfetch
+
+# 4. Native Disk Installer & Filesystem Utilities
 dialog
 parted
 dosfstools
@@ -302,7 +313,7 @@ grub-efi-amd64
 grub-pc-bin
 grub2-common
 
-# 4. Networking & System Utilities
+# 5. Networking & System Utilities
 iproute2
 iputils-ping
 dhcpcd-base
@@ -311,6 +322,7 @@ telnet
 curl
 wget
 ca-certificates
+debianutils
 pciutils
 usbutils
 coreutils
@@ -398,6 +410,26 @@ chmod 0440 /etc/sudoers.d/live
 update-rc.d udev defaults 2>/dev/null || true
 update-rc.d dbus defaults 2>/dev/null || true
 update-rc.d elogind defaults 2>/dev/null || true
+
+# Setup convenience symlinks for CLI tools (bat -> batcat, fd -> fdfind)
+mkdir -p /usr/local/bin
+if [ -f /usr/bin/batcat ] && [ ! -f /usr/local/bin/bat ]; then
+    ln -sf /usr/bin/batcat /usr/local/bin/bat
+fi
+if [ -f /usr/bin/fdfind ] && [ ! -f /usr/local/bin/fd ]; then
+    ln -sf /usr/bin/fdfind /usr/local/bin/fd
+fi
+
+# Setup 'where' helper script (which -a wrapper)
+cat << 'WHERE_EOF' > /usr/local/bin/where
+#!/bin/sh
+if [ \$# -eq 0 ]; then
+    echo "Usage: where <command>" >&2
+    exit 1
+fi
+exec which -a "\$@"
+WHERE_EOF
+chmod 755 /usr/local/bin/where
 EOF
 
     # Configure SSH service in chroot hook if enabled
@@ -476,6 +508,18 @@ configure_chroot_overlays() {
         chmod 755 "${LB_DIR}/config/includes.chroot/usr/local/bin/xedra-installer"
         echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] /usr/local/bin/xedra-installer installed"
     fi
+
+    # Install 'where' helper script (which -a wrapper)
+    cat << 'WHERE_SCRIPT_EOF' > "${LB_DIR}/config/includes.chroot/usr/local/bin/where"
+#!/bin/sh
+if [ $# -eq 0 ]; then
+    echo "Usage: where <command>" >&2
+    exit 1
+fi
+exec which -a "$@"
+WHERE_SCRIPT_EOF
+    chmod 755 "${LB_DIR}/config/includes.chroot/usr/local/bin/where"
+    echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] /usr/local/bin/where helper installed"
 
     # Copy inittab
     if [[ -f "${CONFIG_DIR}/inittab" ]]; then
