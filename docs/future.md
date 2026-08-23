@@ -28,16 +28,31 @@ This document serves as a parking lot and architectural backlog for future optim
   2. Boot-time decompression latency inside disposable test VMs (`xedra-lab`).
   3. Resulting ISO image size.
 
+### 1.5 SysVinit Transition Hook Package Ordering Refactor
+* **Observation**: In `0100-sysvinit-transition.hook.chroot`, installing `sysvinit-core`, `initscripts`, and `insserv` in a single batch `apt-get install` occasionally causes `insserv`'s postinst trigger to run before `initscripts` is configured, producing a transient warning (`insserv: FATAL: service mountkernfs has to exist for service networking`).
+* **Solution**: Refactor the hook into discrete stages:
+  1. Install `initscripts` and `orphan-sysvinit-scripts` first (creating `/etc/init.d/mountkernfs.sh`, `/etc/init.d/urandom`, and LSB facility definitions).
+  2. Install `sysvinit-core`, `insserv`, `live-config-sysvinit`, and `elogind`.
+  3. Explicitly execute `insserv -d` to recalculate the complete dependency boot sequence across all runlevel scripts.
+
 ---
 
-## 2. Desktop & Installer Enhancements
+## 2. Shell & Developer CLI Enhancements
 
-### 2.1 Graphical Installer (Calamares Integration)
+### 2.1 Automated Zoxide Shell Integration (`z` Jump Command)
+* **Concept**: Inject `eval "$(zoxide init bash)"` into `/etc/bash.bashrc` (or `/home/live/.bashrc` via skeleton overlay).
+* **Benefit**: Enables the interactive `z <directory>` fuzzy directory jump command out of the box without requiring manual user shell setup.
+
+---
+
+## 3. Desktop & Installer Enhancements
+
+### 3.1 Graphical Installer (Calamares Integration)
 * **Concept**: Integrate the modular Qt-based Calamares installer alongside the existing native `/usr/local/bin/xedra-installer`.
 * **Features**: Visual disk partitioner, timezone map selector, and locale configuration.
 
-### 2.2 Dedicated Package Repository (APT Mirror)
+### 3.2 Dedicated Package Repository (APT Mirror)
 * **Concept**: Host a standalone Xedra package repository (`deb.xedralinux.org` / GitHub Pages raw pool) for distribution-specific packages, themes, and customized SysVinit scripts.
 
-### 2.3 Automated Builder VM Resource Tuning
+### 3.3 Automated Builder VM Resource Tuning
 * **Concept**: Provide a host helper script to dynamically scale `xedra-builder`'s CPU core and RAM allocation based on host hardware availability before launching heavy release builds.
