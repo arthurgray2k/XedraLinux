@@ -101,6 +101,16 @@ else:
     ssh_pass_auth = True
     ssh_root_login = 'prohibit-password'
 
+# Sanitize PermitRootLogin to valid OpenSSH values
+if isinstance(ssh_root_login, bool):
+    ssh_root_login = 'yes' if ssh_root_login else 'no'
+elif str(ssh_root_login).lower() in ('true', '1'):
+    ssh_root_login = 'yes'
+elif str(ssh_root_login).lower() in ('false', '0'):
+    ssh_root_login = 'no'
+elif str(ssh_root_login).lower() not in ('yes', 'no', 'prohibit-password', 'forced-commands-only'):
+    ssh_root_login = 'prohibit-password'
+
 if isinstance(merged_telnet, dict):
     enable_telnet = merged_telnet.get('enabled', False)
     telnet_port = merged_telnet.get('port', 23)
@@ -238,6 +248,7 @@ prepare_workspace() {
         --cache "${cache_flag}" \
         --cache-packages "${cache_packages_flag}" \
         --cache-stages "${cache_stages_flag}" \
+        --apt-indices true \
         --chroot-squashfs-compression-type "${compression_type}" \
         "${compression_level_opt[@]}" \
         --bootappend-live "boot=live components hostname=${LIVE_HOSTNAME} username=${LIVE_USERNAME} quiet" \
@@ -315,7 +326,7 @@ EOF
 
     # Conditionally include Telnet Server
     if [[ "${ENABLE_TELNET}" == "true" ]]; then
-        echo "telnetd" >> "${LB_DIR}/config/package-lists/xedra.list.chroot"
+        echo "inetutils-telnetd" >> "${LB_DIR}/config/package-lists/xedra.list.chroot"
         echo "openbsd-inetd" >> "${LB_DIR}/config/package-lists/xedra.list.chroot"
     fi
 
@@ -391,22 +402,8 @@ EOF
 
     # Configure SSH service in chroot hook if enabled
     if [[ "${ENABLE_SSH}" == "true" ]]; then
-        local ssh_pass_flag="no"
-        local kbd_flag="no"
-        if [[ "${SSH_PASSWORD_AUTH}" == "true" ]]; then
-            ssh_pass_flag="yes"
-            kbd_flag="yes"
-        fi
-        cat << SSH_HOOK_EOF >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
-echo "=== [XEDRA HOOK] Configuring SSH daemon (port=${SSH_PORT}, password_auth=${ssh_pass_flag}, permit_root=${SSH_PERMIT_ROOT_LOGIN}) ==="
-mkdir -p /etc/ssh/sshd_config.d
-cat << SSHD_CONF > /etc/ssh/sshd_config.d/01-xedra.conf
-# Xedra Linux - Declarative OpenSSH Configuration
-Port ${SSH_PORT}
-PasswordAuthentication ${ssh_pass_flag}
-KbdInteractiveAuthentication ${kbd_flag}
-PermitRootLogin ${SSH_PERMIT_ROOT_LOGIN}
-SSHD_CONF
+        cat << 'SSH_HOOK_EOF' >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
+echo "=== [XEDRA HOOK] Generating SSH host keys and enabling ssh service ==="
 ssh-keygen -A 2>/dev/null || true
 update-rc.d ssh defaults 2>/dev/null || true
 SSH_HOOK_EOF
@@ -414,21 +411,10 @@ SSH_HOOK_EOF
 
     # Configure Telnet service in chroot hook if enabled
     if [[ "${ENABLE_TELNET}" == "true" ]]; then
-        cat << TELNET_HOOK_EOF >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
-echo "=== [XEDRA HOOK] Configuring Telnet in /etc/inetd.conf (port=${TELNET_PORT}, permit_root=${TELNET_PERMIT_ROOT_LOGIN}) ==="
-touch /etc/inetd.conf
-if ! grep -q "in.telnetd" /etc/inetd.conf 2>/dev/null; then
-    echo "${TELNET_PORT}          stream  tcp     nowait  root    /usr/sbin/in.telnetd    in.telnetd" >> /etc/inetd.conf
-fi
-if [[ "${TELNET_PERMIT_ROOT_LOGIN}" == "true" ]]; then
-    mkdir -p /etc
-    for i in \$(seq 0 9); do
-        if ! grep -qx "pts/\$i" /etc/securetty 2>/dev/null; then
-            echo "pts/\$i" >> /etc/securetty
-        fi
-    done
-fi
+        cat << 'TELNET_HOOK_EOF' >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
+echo "=== [XEDRA HOOK] Enabling Telnet (openbsd-inetd & inetutils-syslogd) services ==="
 update-rc.d openbsd-inetd defaults 2>/dev/null || true
+update-rc.d inetutils-syslogd defaults 2>/dev/null || true
 TELNET_HOOK_EOF
     fi
 
@@ -520,7 +506,7 @@ SSHD_CONF_EOF
     if [[ "${ENABLE_TELNET}" == "true" ]]; then
         mkdir -p "${LB_DIR}/config/includes.chroot/etc"
         cat << INETD_CONF_EOF > "${LB_DIR}/config/includes.chroot/etc/inetd.conf"
-${TELNET_PORT}          stream  tcp     nowait  root    /usr/sbin/in.telnetd    in.telnetd
+${TELNET_PORT}          stream  tcp     nowait  root    /usr/sbin/telnetd       telnetd
 INETD_CONF_EOF
         if [[ "${TELNET_PERMIT_ROOT_LOGIN}" == "true" ]]; then
             for i in $(seq 0 9); do
@@ -591,17 +577,15 @@ PROFILE_EOF
         issue_title="${DISTRO_NAME} ${DISTRO_VERSION} Minimal"
     fi
 
-    cat << ISSUE_EOF > "${LB_DIR}/config/includes.chroot/etc/issue"
+    cat << 'ISSUE_EOF' > "${LB_DIR}/config/includes.chroot/etc/issue"
       __  __        _               _     _                  
       \ \/ /___  __| |_ __ __ _    | |   (_)_ __  _   ___  __
        \  // _ \/ _` | '__/ _` |   | |   | | '_ \| | | \ \/ /
        /  \  __/ (_| | | | (_| |   | |___| | | | | |_| |>  < 
       /_/\_\___|\__,_|_|  \__,_|   |_____|_|_| |_|\__,_/_/\_\
 
-     ${issue_title} (${DEBIAN_ARCH}) — ${DISTRO_CODENAME^}
-     Kernel \r on an \m (\l)
-
 ISSUE_EOF
+    printf '     %s (%s) — %s\n     Kernel \\r on an \\m (\\l)\n\n' "${issue_title}" "${DEBIAN_ARCH}" "${DISTRO_CODENAME^}" >> "${LB_DIR}/config/includes.chroot/etc/issue"
 
     cp "${LB_DIR}/config/includes.chroot/etc/issue" "${LB_DIR}/config/includes.chroot/etc/issue.net"
 
