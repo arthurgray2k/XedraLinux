@@ -12,6 +12,11 @@
 ## 3. Mandatory Pre-Flight Validation
 - **Syntax Verification**: Every edited shell script must be validated using `bash -n <script_path>` before concluding a turn.
 - **Manifest Validation**: All JSON configuration files (e.g. `config/xedra-build.json`) must be syntax-validated using `python3 -m json.tool <file>`.
+- **Daemon Runtime Contract Verification**: Reviewing only that the build succeeds or scripts have valid syntax is useless if installed daemons are not configured to listen and accept logins. Every added or modified service daemon (e.g. OpenSSH, Telnet/inetd, D-Bus, elogind, X11) must be traced across its entire runtime lifecycle:
+  1. **Configuration Loading**: Exactly which config files the daemon parses on boot (e.g. `/etc/ssh/sshd_config.d/*.conf`, `/etc/inetd.conf`).
+  2. **Socket Binding**: Which network ports and IP interfaces are actively opened upon boot (e.g. TCP 22, TCP 23).
+  3. **Authentication & PAM Handshake**: How user credentials, PAM policies (`/etc/pam.d/`), and shadow permissions are verified.
+  4. **Non-Interactive Chroot Safety**: Explicitly verify that automated `live-build` batch installation does not silently skip config generation (e.g. `inetd.conf`) or inherit disabled upstream authentication defaults (e.g. `PasswordAuthentication no`).
 
 ## 4. Protected Architectural Baselines
 The following architectural features must be preserved across all builds and iterations:

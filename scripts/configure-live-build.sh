@@ -82,8 +82,37 @@ iso_app = p.get('iso_application', d.get('distro', {}).get('iso_application', 'X
 
 srv = d.get('services', {})
 prof_srv = p.get('services', {})
-enable_ssh = prof_srv.get('ssh', srv.get('ssh', True))
-enable_telnet = prof_srv.get('telnet', srv.get('telnet', False))
+merged_ssh = prof_srv.get('ssh', srv.get('ssh', {}))
+merged_telnet = prof_srv.get('telnet', srv.get('telnet', {}))
+
+if isinstance(merged_ssh, dict):
+    enable_ssh = merged_ssh.get('enabled', True)
+    ssh_port = merged_ssh.get('port', 22)
+    ssh_pass_auth = merged_ssh.get('password_authentication', True)
+    ssh_root_login = merged_ssh.get('permit_root_login', 'prohibit-password')
+elif isinstance(merged_ssh, bool):
+    enable_ssh = merged_ssh
+    ssh_port = 22
+    ssh_pass_auth = True
+    ssh_root_login = 'prohibit-password'
+else:
+    enable_ssh = True
+    ssh_port = 22
+    ssh_pass_auth = True
+    ssh_root_login = 'prohibit-password'
+
+if isinstance(merged_telnet, dict):
+    enable_telnet = merged_telnet.get('enabled', False)
+    telnet_port = merged_telnet.get('port', 23)
+    telnet_root_login = merged_telnet.get('permit_root_login', False)
+elif isinstance(merged_telnet, bool):
+    enable_telnet = merged_telnet
+    telnet_port = 23
+    telnet_root_login = False
+else:
+    enable_telnet = False
+    telnet_port = 23
+    telnet_root_login = False
 
 print(f'DISTRO_NAME=\"{d.get(\"distro\", {}).get(\"name\", \"Xedra Linux\")}\"')
 print(f'DISTRO_VERSION=\"{ver}\"')
@@ -107,7 +136,12 @@ print(f'LIVE_USERNAME=\"{d.get(\"live_session\", {}).get(\"username\", \"live\")
 print(f'LIVE_USER_GROUPS=\"{d.get(\"live_session\", {}).get(\"user_groups\", \"sudo,audio,video,cdrom,plugdev,kvm,input,tty\")}\"')
 print(f'LIVE_AUTOLOGIN={str(d.get(\"live_session\", {}).get(\"autologin\", True)).lower()}')
 print(f'ENABLE_SSH={str(enable_ssh).lower()}')
+print(f'SSH_PORT={ssh_port}')
+print(f'SSH_PASSWORD_AUTH={str(ssh_pass_auth).lower()}')
+print(f'SSH_PERMIT_ROOT_LOGIN=\"{ssh_root_login}\"')
 print(f'ENABLE_TELNET={str(enable_telnet).lower()}')
+print(f'TELNET_PORT={telnet_port}')
+print(f'TELNET_PERMIT_ROOT_LOGIN={str(telnet_root_login).lower()}')
 ")"
 fi
 
@@ -119,8 +153,8 @@ print_header() {
     echo "Distribution:         ${DISTRO_NAME} ${DISTRO_VERSION} (${DISTRO_CODENAME})"
     echo "Active Profile:       ${BUILD_PROFILE}"
     echo "Target ISO Output:    ${ISO_NAME}"
-    echo "SSH Server:           ${ENABLE_SSH}"
-    echo "Telnet Server:        ${ENABLE_TELNET}"
+    echo "SSH Server:           ${ENABLE_SSH} (Port: ${SSH_PORT}, PasswordAuth: ${SSH_PASSWORD_AUTH}, PermitRootLogin: ${SSH_PERMIT_ROOT_LOGIN})"
+    echo "Telnet Server:        ${ENABLE_TELNET} (Port: ${TELNET_PORT}, PermitRootLogin: ${TELNET_PERMIT_ROOT_LOGIN})"
     echo "Package Caching:      ${CACHE_PACKAGES}"
     echo "Bootstrap Caching:    ${CACHE_BOOTSTRAP}"
     echo "Fast I/O:             ${FAST_IO}"
@@ -263,6 +297,9 @@ iputils-ping
 dhcpcd-base
 net-tools
 telnet
+curl
+wget
+ca-certificates
 pciutils
 usbutils
 coreutils
@@ -354,8 +391,22 @@ EOF
 
     # Configure SSH service in chroot hook if enabled
     if [[ "${ENABLE_SSH}" == "true" ]]; then
-        cat << 'SSH_HOOK_EOF' >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
-echo "=== [XEDRA HOOK] Generating SSH host keys and enabling ssh service ==="
+        local ssh_pass_flag="no"
+        local kbd_flag="no"
+        if [[ "${SSH_PASSWORD_AUTH}" == "true" ]]; then
+            ssh_pass_flag="yes"
+            kbd_flag="yes"
+        fi
+        cat << SSH_HOOK_EOF >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
+echo "=== [XEDRA HOOK] Configuring SSH daemon (port=${SSH_PORT}, password_auth=${ssh_pass_flag}, permit_root=${SSH_PERMIT_ROOT_LOGIN}) ==="
+mkdir -p /etc/ssh/sshd_config.d
+cat << SSHD_CONF > /etc/ssh/sshd_config.d/01-xedra.conf
+# Xedra Linux - Declarative OpenSSH Configuration
+Port ${SSH_PORT}
+PasswordAuthentication ${ssh_pass_flag}
+KbdInteractiveAuthentication ${kbd_flag}
+PermitRootLogin ${SSH_PERMIT_ROOT_LOGIN}
+SSHD_CONF
 ssh-keygen -A 2>/dev/null || true
 update-rc.d ssh defaults 2>/dev/null || true
 SSH_HOOK_EOF
@@ -363,8 +414,20 @@ SSH_HOOK_EOF
 
     # Configure Telnet service in chroot hook if enabled
     if [[ "${ENABLE_TELNET}" == "true" ]]; then
-        cat << 'TELNET_HOOK_EOF' >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
-echo "=== [XEDRA HOOK] Enabling Telnet (openbsd-inetd) service ==="
+        cat << TELNET_HOOK_EOF >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
+echo "=== [XEDRA HOOK] Configuring Telnet in /etc/inetd.conf (port=${TELNET_PORT}, permit_root=${TELNET_PERMIT_ROOT_LOGIN}) ==="
+touch /etc/inetd.conf
+if ! grep -q "in.telnetd" /etc/inetd.conf 2>/dev/null; then
+    echo "${TELNET_PORT}          stream  tcp     nowait  root    /usr/sbin/in.telnetd    in.telnetd" >> /etc/inetd.conf
+fi
+if [[ "${TELNET_PERMIT_ROOT_LOGIN}" == "true" ]]; then
+    mkdir -p /etc
+    for i in \$(seq 0 9); do
+        if ! grep -qx "pts/\$i" /etc/securetty 2>/dev/null; then
+            echo "pts/\$i" >> /etc/securetty
+        fi
+    done
+fi
 update-rc.d openbsd-inetd defaults 2>/dev/null || true
 TELNET_HOOK_EOF
     fi
@@ -432,6 +495,39 @@ configure_chroot_overlays() {
     if [[ -f "${CONFIG_DIR}/inittab" ]]; then
         cp "${CONFIG_DIR}/inittab" "${LB_DIR}/config/includes.chroot/etc/inittab"
         echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] /etc/inittab overlay added"
+    fi
+
+    # Configure SSH daemon settings if enabled
+    if [[ "${ENABLE_SSH}" == "true" ]]; then
+        local ssh_pass_flag="no"
+        local kbd_flag="no"
+        if [[ "${SSH_PASSWORD_AUTH}" == "true" ]]; then
+            ssh_pass_flag="yes"
+            kbd_flag="yes"
+        fi
+        mkdir -p "${LB_DIR}/config/includes.chroot/etc/ssh/sshd_config.d"
+        cat << SSHD_CONF_EOF > "${LB_DIR}/config/includes.chroot/etc/ssh/sshd_config.d/01-xedra.conf"
+# Xedra Linux - Declarative OpenSSH Configuration
+Port ${SSH_PORT}
+PasswordAuthentication ${ssh_pass_flag}
+KbdInteractiveAuthentication ${kbd_flag}
+PermitRootLogin ${SSH_PERMIT_ROOT_LOGIN}
+SSHD_CONF_EOF
+        echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] SSH overlay added (port: ${SSH_PORT}, password_auth: ${ssh_pass_flag}, permit_root: ${SSH_PERMIT_ROOT_LOGIN})"
+    fi
+
+    # Configure Telnet daemon settings if enabled
+    if [[ "${ENABLE_TELNET}" == "true" ]]; then
+        mkdir -p "${LB_DIR}/config/includes.chroot/etc"
+        cat << INETD_CONF_EOF > "${LB_DIR}/config/includes.chroot/etc/inetd.conf"
+${TELNET_PORT}          stream  tcp     nowait  root    /usr/sbin/in.telnetd    in.telnetd
+INETD_CONF_EOF
+        if [[ "${TELNET_PERMIT_ROOT_LOGIN}" == "true" ]]; then
+            for i in $(seq 0 9); do
+                echo "pts/$i" >> "${LB_DIR}/config/includes.chroot/etc/securetty"
+            done
+        fi
+        echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Telnet /etc/inetd.conf overlay added (port: ${TELNET_PORT}, permit_root: ${TELNET_PERMIT_ROOT_LOGIN})"
     fi
 
     # Configure GUI overlays only for non-minimal builds

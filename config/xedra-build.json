@@ -58,7 +58,16 @@
     "autologin": true
   },
   "services": {
-    "ssh": true,
-    "telnet": false
+    "ssh": {
+      "enabled": true,
+      "port": 22,
+      "password_authentication": true,
+      "permit_root_login": "prohibit-password"
+    },
+    "telnet": {
+      "enabled": false,
+      "port": 23,
+      "permit_root_login": false
+    }
   }
 }

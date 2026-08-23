@@ -90,3 +90,15 @@ This document records the foundational technical decisions for Xedra Linux, expl
 - **Decision**: Evolve the build pipeline in Milestone 0.2+ to read declarative build manifests (e.g. `config/xedra-build.yaml` or `json`) supporting build profiles (`dev` fast-cache vs `release` full-purge).
 - **Reason**: Decouples build parameters (package sets, mirror URLs, cache policies, user credentials, branding) from procedural shell script logic, making builds fully reproducible and configurable without modifying code.
 - **Verdict**: **Procedural Scripts** for Milestone 0.1; **Declarative YAML/JSON Manifests** in Milestone 0.2+.
+
+---
+
+## 10. Daemon Runtime Contract Verification vs. Build-Time Syntax Checks
+
+- **Decision**: Mandate complete **Daemon Runtime Contract Verification** for every added or modified system daemon, treating build-time syntax verification (`bash -n`, JSON schema validation) as insufficient on its own.
+- **Reason**: Distribution engineering builds frequently succeed cleanly even when underlying service daemons are misconfigured to reject connections or fail silently upon boot. Reviewing only that the build succeeds is useless if the installed daemons are not configured to listen on network sockets and accept logins. Every daemon must be traced across its full 4-stage runtime contract:
+  1. **Configuration Loading**: Exactly which config files the daemon parses on boot (e.g. `/etc/ssh/sshd_config.d/*.conf`, `/etc/inetd.conf`).
+  2. **Socket Binding**: Which network ports and IP interfaces are actively opened upon boot (e.g. TCP 22, TCP 23).
+  3. **Authentication & PAM Handshake**: How user credentials, PAM policies (`/etc/pam.d/`), and shadow permissions are verified.
+  4. **Non-Interactive Chroot Safety**: Explicitly verifying that automated `live-build` batch installation does not silently skip config generation (e.g. `inetd.conf`) or inherit disabled upstream authentication defaults (e.g. `PasswordAuthentication no` in OpenSSH 9.6+).
+- **Verdict**: **Mandatory Daemon Runtime Contract Verification** enforced across all reviews and pull requests.

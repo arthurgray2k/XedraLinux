@@ -122,3 +122,22 @@ This document tracks technical insights, practical lessons, encountered challeng
    - `live-build` temporarily installs bootloader packages (`grub-efi-amd64-signed`, `shim-signed`, `mtools`) to assemble the UEFI partition, then purges them before `mksquashfs` compression to prevent ISO bloat.
 2. **Hybrid ISO Generation**:
    - `xorriso` packages the kernel, squashfs, and EFI System Partition into a single hybrid ISO (948 MB) bootable across both legacy BIOS and modern UEFI platforms.
+
+---
+
+## Stage 9 - Service Daemon Engineering & Runtime Contract Verification (Milestone 0.4.2)
+
+- **Status**: `Verified & Complete`
+- **Focus**: Adding remote access daemons (OpenSSH on port 22, Telnet/inetd on port 23) and establishing rigorous daemon verification standards.
+
+### What Was Learned & Pitfalls Encountered:
+1. **Build-Time Verification vs. Daemon Runtime Contracts**:
+   - Syntactical correctness (`bash -n`) and successful package installation during `lb build` do not guarantee that installed daemons accept connections upon boot.
+   - Reviewing only that the build succeeds is useless if installed services fail to listen or authenticate.
+2. **OpenSSH 9.6+ Upstream Policy Shift**:
+   - In Debian 13 "Trixie", OpenSSH defaults `PasswordAuthentication` to disabled (`no`), requiring an explicit `/etc/ssh/sshd_config.d/01-xedra.conf` drop-in override (`PasswordAuthentication yes`) for password-based logins to function.
+3. **Super-Server (`openbsd-inetd`) Socket Mechanics in Non-Interactive Chroots**:
+   - `telnetd` is not an independent daemon; it relies on `openbsd-inetd` parsing `/etc/inetd.conf`.
+   - In automated non-interactive `debootstrap`/`live-build` environments, `telnetd` does not automatically populate `/etc/inetd.conf`. The socket definition (`telnet stream tcp nowait root /usr/sbin/in.telnetd in.telnetd`) must be explicitly written during build configuration, or `inetd` will start with an empty config and refuse connections on TCP Port 23.
+4. **Mandatory 4-Point Daemon Audit**:
+   - Every added daemon must be traced for: (1) config file resolution, (2) TCP/UDP socket binding, (3) PAM authentication handshake, and (4) non-interactive batch installation safety.

@@ -118,7 +118,19 @@ Once `xedra-installer` displays the success banner:
 
 ```bash
 # 1. Disconnect the Live ISO from the virtual CD-ROM drive
+# (Depending on the hypervisor/bus type, the CD-ROM target may be 'hda', 'sda', or the ISO path directly):
+
+# Option 1 (IDE / ATAPI target - Default for generic/Q35):
+virsh --connect qemu:///system change-media xedra-lab hda --eject --config --live
+
+# OR Option 2 (SATA target):
 virsh --connect qemu:///system change-media xedra-lab sda --eject --config --live
+
+# OR Option 3 (Direct ISO Path):
+virsh --connect qemu:///system change-media xedra-lab /home/mint/XedraLinux/output/xedra-0.4.2-amd64.iso --eject --config --live
+
+# Tip: To check your exact CD-ROM device target name, run:
+# virsh --connect qemu:///system domblklist xedra-lab
 
 # 2. Reset the VM to boot immediately from the installed /dev/vda disk
 virsh --connect qemu:///system reset xedra-lab
