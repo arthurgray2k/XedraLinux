@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Xedra Linux - Stage 8: Build Bootable Xedra 0.4.1 Live ISO
+# Xedra Linux - Stage 8: Build Bootable Xedra 0.4.2 Live ISO
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Purpose:
-#   Compiles the complete bootable Xedra 0.4.1 ISO image using Debian live-build
-#   inside the 'xedra-builder' VM, and outputs the result to output/xedra-0.4.1-amd64.iso.
+#   Compiles the complete bootable Xedra 0.4.2 ISO image using Debian live-build
+#   inside the 'xedra-builder' VM, and outputs the result to output/xedra-0.4.2-amd64.iso.
 #
 # Usage:
 #   sudo ./scripts/build-iso.sh                    # Default: Fast dev cached build
@@ -16,8 +16,8 @@
 #   sudo ./scripts/build-iso.sh --purge            # Force purge cache
 #
 # Output Artifacts:
-#   - output/xedra-0.4.1-amd64.iso (or xedra-0.4.1-minimal-amd64.iso)
-#   - output/xedra-0.4.1-amd64.iso.sha256
+#   - output/xedra-0.4.2-amd64.iso (or xedra-0.4.2-minimal-amd64.iso)
+#   - output/xedra-0.4.2-amd64.iso.sha256
 # ==============================================================================
 
 set -euo pipefail
@@ -50,14 +50,14 @@ for arg in "$@"; do
     esac
 done
 
-ISO_NAME="xedra-0.4.1-amd64.iso"
+ISO_NAME="xedra-0.4.2-amd64.iso"
 if [[ -f "${JSON_CONFIG}" ]] && command -v python3 >/dev/null 2>&1; then
     ISO_NAME="$(python3 -c "
 import json
 with open('${JSON_CONFIG}') as f:
     d = json.load(f)
 p = d.get('profiles', {}).get('${BUILD_PROFILE}', d.get('profiles', {}).get('dev', {}))
-ver = d.get('distro', {}).get('version', '0.4.1')
+ver = d.get('distro', {}).get('version', '0.4.2')
 print(p.get('iso_name', f'xedra-{ver}-amd64.iso'))
 ")"
 fi
@@ -65,7 +65,7 @@ TARGET_ISO="${OUTPUT_DIR}/${ISO_NAME}"
 
 print_header() {
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
-    echo -e "${COLOR_BOLD}${COLOR_CYAN}  Xedra Linux - Compile Live ISO Image (v0.4.1)        ${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}  Xedra Linux - Compile Live ISO Image (v0.4.2)        ${COLOR_RESET}"
     echo -e "${COLOR_BOLD}${COLOR_CYAN}======================================================${COLOR_RESET}"
     echo "Workspace:      ${LB_DIR}"
     echo "Active Profile: ${BUILD_PROFILE}"

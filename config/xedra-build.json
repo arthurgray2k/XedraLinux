@@ -2,12 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "distro": {
     "name": "Xedra Linux",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "codename": "genesis",
     "init_system": "sysvinit",
-    "iso_application": "Xedra Linux 0.4.1",
+    "iso_application": "Xedra Linux 0.4.2",
     "iso_publisher": "Xedra Linux Project",
-    "iso_volume": "XEDRA_0_4_1"
+    "iso_volume": "XEDRA_0_4_2"
   },
   "debian_base": {
     "distribution": "trixie",
@@ -26,7 +26,7 @@
       "purge_on_clean": false,
       "squashfs_compression": "gzip",
       "apt_recommends": false,
-      "iso_name": "xedra-0.4.1-amd64.iso"
+      "iso_name": "xedra-0.4.2-amd64.iso"
     },
     "release": {
       "description": "Pristine official production release build with fresh upstream downloads and high compression",
@@ -36,7 +36,7 @@
       "purge_on_clean": true,
       "squashfs_compression": "xz",
       "apt_recommends": false,
-      "iso_name": "xedra-0.4.1-amd64.iso"
+      "iso_name": "xedra-0.4.2-amd64.iso"
     },
     "minimal": {
       "description": "Minimal text-only headless rescue edition",
@@ -46,15 +46,19 @@
       "purge_on_clean": false,
       "squashfs_compression": "gzip",
       "apt_recommends": false,
-      "iso_name": "xedra-0.4.1-minimal-amd64.iso",
-      "iso_volume": "XEDRA_0_4_1_MIN",
-      "iso_application": "Xedra Linux 0.4.1 Minimal"
+      "iso_name": "xedra-0.4.2-minimal-amd64.iso",
+      "iso_volume": "XEDRA_0_4_2_MIN",
+      "iso_application": "Xedra Linux 0.4.2 Minimal"
     }
   },
   "live_session": {
     "hostname": "xedra",
-    "username": "xedra",
+    "username": "live",
     "user_groups": "sudo,audio,video,cdrom,plugdev,kvm,input,tty",
     "autologin": true
+  },
+  "services": {
+    "ssh": true,
+    "telnet": false
   }
 }

@@ -1,5 +1,5 @@
-# Xedra Linux - Fluxbox Root Menu (v0.4.1)
-[begin] (Xedra Linux 0.4.1)
+# Xedra Linux - Fluxbox Root Menu (v0.4.2)
+[begin] (Xedra Linux 0.4.2)
   [exec] (Terminal) {xterm -bg black -fg white -fa 'Monospace' -fs 11}
   [exec] (Micro Editor) {xterm -title 'Micro Editor' -e micro}
   [separator]

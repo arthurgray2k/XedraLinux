@@ -18,7 +18,7 @@ A consolidated cheat sheet for building, testing, configuring, and troubleshooti
 # Connect to builder VM
 ssh builder@192.168.122.180
 
-# Build Xedra 0.4.1 ISO with dev cache (~2–3 minutes)
+# Build Xedra 0.4.2 ISO with dev cache (~2–3 minutes)
 cd ~/XedraLinux
 git pull
 sudo ./scripts/build-iso.sh --profile=dev
@@ -31,15 +31,15 @@ sudo ./scripts/build-iso.sh --profile=dev
 ```bash
 cd ~/XedraLinux
 git pull
-scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.4.1-amd64.iso* output/
+scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.4.2-amd64.iso* output/
 
 # (Or for minimal edition):
-# scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.4.1-minimal-amd64.iso* output/
+# scp builder@192.168.122.180:~/XedraLinux/output/xedra-0.4.2-minimal-amd64.iso* output/
 ```
 
 ### Step 3: Launch Test VM (On Linux Host Terminal)
 ```bash
-./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.4.1-amd64.iso
+./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.4.2-amd64.iso
 virt-manager &
 ```
 
@@ -51,7 +51,7 @@ virt-manager &
 | :--- | :--- | :--- | :--- | :--- |
 | **Development Host** | Physical Host | `mint` / your user | your sudo password | Manages Git, QEMU/KVM hypervisor, and libvirt VMs |
 | **Builder VM** | `xedra-builder`<br>`192.168.122.180` | `builder`<br>`root` | `builder`<br>`root` | Compiles Debian rootfs, packages, and UEFI ISOs |
-| **Live Test Target** | `xedra-lab`<br>*(Ephemeral)* | `xedra`<br>`root` | `xedra`<br>`root` *(passwordless sudo)* | Boots and runs the live Xedra ISO in RAM |
+| **Live Test Target** | `xedra-lab`<br>*(Ephemeral)* | `live`<br>`root` | `live`<br>`root` *(passwordless sudo)* | Boots and runs the live Xedra ISO in RAM (SSH: `ssh live@<IP>`) |
 
 ---
 
@@ -59,10 +59,10 @@ virt-manager &
 
 | Command | Profile | Target Output ISO | Desktop Mode | Compression |
 | :--- | :--- | :--- | :--- | :--- |
-| `sudo ./scripts/build-iso.sh` | `dev` | `xedra-0.4.1-amd64.iso` | **Fluxbox GUI (1600x900)** | Gzip Level 1 (Fast) |
-| `sudo ./scripts/build-iso.sh --profile=dev` | `dev` | `xedra-0.4.1-amd64.iso` | **Fluxbox GUI (1600x900)** | Gzip Level 1 (Fast) |
-| `sudo ./scripts/build-iso.sh --profile=release` | `release` | `xedra-0.4.1-amd64.iso` | **Fluxbox GUI (1600x900)** | XZ (Max Compression) |
-| `sudo ./scripts/build-iso.sh --profile=minimal` | `minimal` | `xedra-0.4.1-minimal-amd64.iso` | **CLI Console Only** | Gzip Level 1 (Fast) |
+| `sudo ./scripts/build-iso.sh` | `dev` | `xedra-0.4.2-amd64.iso` | **Fluxbox GUI (1600x900)** | Gzip Level 1 (Fast) |
+| `sudo ./scripts/build-iso.sh --profile=dev` | `dev` | `xedra-0.4.2-amd64.iso` | **Fluxbox GUI (1600x900)** | Gzip Level 1 (Fast) |
+| `sudo ./scripts/build-iso.sh --profile=release` | `release` | `xedra-0.4.2-amd64.iso` | **Fluxbox GUI (1600x900)** | XZ (Max Compression) |
+| `sudo ./scripts/build-iso.sh --profile=minimal` | `minimal` | `xedra-0.4.2-minimal-amd64.iso` | **CLI Console Only** | Gzip Level 1 (Fast) |
 
 ---
 
@@ -96,7 +96,7 @@ virt-manager &
 ### Lab Test VM (`xedra-lab`)
 ```bash
 # Create and launch fresh test VM
-./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.4.1-amd64.iso
+./scripts/vm/create-lab-vm.sh ~/XedraLinux/output/xedra-0.4.2-amd64.iso
 
 # Destroy test VM
 ./scripts/vm/destroy-lab-vm.sh

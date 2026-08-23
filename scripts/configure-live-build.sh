@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Xedra Linux - Stage 7: Configure live-build for Xedra 0.4.1 ISO Generation
+# Xedra Linux - Stage 7: Configure live-build for Xedra 0.4.2 ISO Generation
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -48,12 +48,12 @@ done
 
 # Default variables
 DISTRO_NAME="Xedra Linux"
-DISTRO_VERSION="0.4.1"
+DISTRO_VERSION="0.4.2"
 DISTRO_CODENAME="genesis"
-ISO_VOLUME="XEDRA_0_4_1"
-ISO_APPLICATION="Xedra Linux 0.4.1"
+ISO_VOLUME="XEDRA_0_4_2"
+ISO_APPLICATION="Xedra Linux 0.4.2"
 ISO_PUBLISHER="Xedra Linux Project"
-ISO_NAME="xedra-0.4.1-amd64.iso"
+ISO_NAME="xedra-0.4.2-amd64.iso"
 CACHE_PACKAGES=true
 PURGE_ON_CLEAN=false
 DEBIAN_DISTRIBUTION="trixie"
@@ -62,9 +62,11 @@ DEBIAN_ARCHIVE_AREAS="main contrib non-free non-free-firmware"
 DEBIAN_MIRROR_BOOTSTRAP="https://deb.debian.org/debian"
 DEBIAN_MIRROR_BINARY="https://deb.debian.org/debian"
 LIVE_HOSTNAME="xedra"
-LIVE_USERNAME="xedra"
+LIVE_USERNAME="live"
 LIVE_USER_GROUPS="sudo,audio,video,cdrom,plugdev,kvm,input,tty"
 LIVE_AUTOLOGIN=true
+ENABLE_SSH=true
+ENABLE_TELNET=false
 
 # Parse JSON manifest if present
 if [[ -f "${JSON_CONFIG}" ]] && command -v python3 >/dev/null 2>&1; then
@@ -73,10 +75,15 @@ import json
 with open('${JSON_CONFIG}') as f:
     d = json.load(f)
 p = d.get('profiles', {}).get('${BUILD_PROFILE}', d.get('profiles', {}).get('dev', {}))
-ver = d.get('distro', {}).get('version', '0.4')
+ver = d.get('distro', {}).get('version', '0.4.2')
 iso_name = p.get('iso_name', f'xedra-{ver}-amd64.iso')
-iso_vol = p.get('iso_volume', d.get('distro', {}).get('iso_volume', 'XEDRA_0_4'))
-iso_app = p.get('iso_application', d.get('distro', {}).get('iso_application', 'Xedra Linux 0.4'))
+iso_vol = p.get('iso_volume', d.get('distro', {}).get('iso_volume', 'XEDRA_0_4_2'))
+iso_app = p.get('iso_application', d.get('distro', {}).get('iso_application', 'Xedra Linux 0.4.2'))
+
+srv = d.get('services', {})
+prof_srv = p.get('services', {})
+enable_ssh = prof_srv.get('ssh', srv.get('ssh', True))
+enable_telnet = prof_srv.get('telnet', srv.get('telnet', False))
 
 print(f'DISTRO_NAME=\"{d.get(\"distro\", {}).get(\"name\", \"Xedra Linux\")}\"')
 print(f'DISTRO_VERSION=\"{ver}\"')
@@ -96,9 +103,11 @@ print(f'FAST_IO={str(p.get(\"fast_io\", True)).lower()}')
 print(f'PURGE_ON_CLEAN={str(p.get(\"purge_on_clean\", False)).lower()}')
 print(f'SQUASHFS_COMPRESSION=\"{p.get(\"squashfs_compression\", \"gzip\")}\"')
 print(f'LIVE_HOSTNAME=\"{d.get(\"live_session\", {}).get(\"hostname\", \"xedra\")}\"')
-print(f'LIVE_USERNAME=\"{d.get(\"live_session\", {}).get(\"username\", \"xedra\")}\"')
+print(f'LIVE_USERNAME=\"{d.get(\"live_session\", {}).get(\"username\", \"live\")}\"')
 print(f'LIVE_USER_GROUPS=\"{d.get(\"live_session\", {}).get(\"user_groups\", \"sudo,audio,video,cdrom,plugdev,kvm,input,tty\")}\"')
 print(f'LIVE_AUTOLOGIN={str(d.get(\"live_session\", {}).get(\"autologin\", True)).lower()}')
+print(f'ENABLE_SSH={str(enable_ssh).lower()}')
+print(f'ENABLE_TELNET={str(enable_telnet).lower()}')
 ")"
 fi
 
@@ -110,6 +119,8 @@ print_header() {
     echo "Distribution:         ${DISTRO_NAME} ${DISTRO_VERSION} (${DISTRO_CODENAME})"
     echo "Active Profile:       ${BUILD_PROFILE}"
     echo "Target ISO Output:    ${ISO_NAME}"
+    echo "SSH Server:           ${ENABLE_SSH}"
+    echo "Telnet Server:        ${ENABLE_TELNET}"
     echo "Package Caching:      ${CACHE_PACKAGES}"
     echo "Bootstrap Caching:    ${CACHE_BOOTSTRAP}"
     echo "Fast I/O:             ${FAST_IO}"
@@ -218,7 +229,7 @@ configure_xedra_packages() {
 
     # Core Package List for All Profiles (Kernel, Languages, Editors, Installer, CLI Tools)
     cat << 'EOF' > "${LB_DIR}/config/package-lists/xedra.list.chroot"
-# Xedra 0.4.1 Core Package List
+# Xedra 0.4.2 Core Package List
 
 # 1. Linux Kernel & Hardware Device Subsystem
 linux-image-amd64
@@ -251,6 +262,7 @@ iproute2
 iputils-ping
 dhcpcd-base
 net-tools
+telnet
 pciutils
 usbutils
 coreutils
@@ -258,6 +270,17 @@ util-linux
 procps
 sudo
 EOF
+
+    # Conditionally include OpenSSH Server
+    if [[ "${ENABLE_SSH}" == "true" ]]; then
+        echo "openssh-server" >> "${LB_DIR}/config/package-lists/xedra.list.chroot"
+    fi
+
+    # Conditionally include Telnet Server
+    if [[ "${ENABLE_TELNET}" == "true" ]]; then
+        echo "telnetd" >> "${LB_DIR}/config/package-lists/xedra.list.chroot"
+        echo "openbsd-inetd" >> "${LB_DIR}/config/package-lists/xedra.list.chroot"
+    fi
 
     # 5. Display Server, Window Manager & Input Drivers (GUI Profiles Only)
     if [[ "${BUILD_PROFILE}" != "minimal" ]]; then
@@ -310,26 +333,41 @@ apt-get install -y --no-install-recommends \
     libpam-elogind \
     --allow-remove-essential
 
-echo "=== [XEDRA HOOK] Setting default users and passwords ==="
+echo "=== [XEDRA HOOK] Setting default live and root users ==="
 # Set root password to 'root'
 echo "root:root" | chpasswd
 
-# Create xedra live user with password 'xedra' and input/audio/video privileges
-useradd -m -s /bin/bash -G sudo,audio,video,cdrom,plugdev,kvm,input,tty xedra 2>/dev/null || true
-echo "xedra:xedra" | chpasswd
+# Create live user with password 'live' and input/audio/video privileges
+useradd -m -s /bin/bash -G sudo,audio,video,cdrom,plugdev,kvm,input,tty live 2>/dev/null || true
+echo "live:live" | chpasswd
 
-# Grant passwordless sudo to xedra user
+# Grant passwordless sudo to live user
 mkdir -p /etc/sudoers.d
-echo "xedra ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/xedra
-chmod 0440 /etc/sudoers.d/xedra
+echo "live ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/live
+chmod 0440 /etc/sudoers.d/live
 
-# Enable udev and essential SysVinit services
+# Enable essential SysVinit services
 update-rc.d udev defaults 2>/dev/null || true
 update-rc.d dbus defaults 2>/dev/null || true
 update-rc.d elogind defaults 2>/dev/null || true
-
-# Configure .profile in /etc/skel and /home/xedra
 EOF
+
+    # Configure SSH service in chroot hook if enabled
+    if [[ "${ENABLE_SSH}" == "true" ]]; then
+        cat << 'SSH_HOOK_EOF' >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
+echo "=== [XEDRA HOOK] Generating SSH host keys and enabling ssh service ==="
+ssh-keygen -A 2>/dev/null || true
+update-rc.d ssh defaults 2>/dev/null || true
+SSH_HOOK_EOF
+    fi
+
+    # Configure Telnet service in chroot hook if enabled
+    if [[ "${ENABLE_TELNET}" == "true" ]]; then
+        cat << 'TELNET_HOOK_EOF' >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
+echo "=== [XEDRA HOOK] Enabling Telnet (openbsd-inetd) service ==="
+update-rc.d openbsd-inetd defaults 2>/dev/null || true
+TELNET_HOOK_EOF
+    fi
 
     if [[ "${BUILD_PROFILE}" != "minimal" ]]; then
         cat << 'EOF' >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
@@ -350,8 +388,8 @@ EOF
     fi
 
     cat << 'EOF' >> "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
-cp /etc/skel/.profile /home/xedra/.profile
-chown -R xedra:xedra /home/xedra
+cp /etc/skel/.profile /home/live/.profile
+chown -R live:live /home/live
 
 # Configure networking interfaces for automatic DHCP
 cat << 'NET_EOF' > /etc/network/interfaces
@@ -367,7 +405,7 @@ allow-hotplug enp1s0
 iface enp1s0 inet dhcp
 NET_EOF
 
-echo "=== [XEDRA HOOK] SysVinit installed; input & users configured ==="
+echo "=== [XEDRA HOOK] SysVinit installed; SSH, input & live user configured ==="
 EOF
 
     chmod +x "${LB_DIR}/config/hooks/normal/0100-sysvinit-transition.hook.chroot"
@@ -379,7 +417,7 @@ configure_chroot_overlays() {
     echo -e "${COLOR_BOLD}--- 4. Installing Xedra Overlay Configurations ---${COLOR_RESET}"
     mkdir -p "${LB_DIR}/config/includes.chroot/etc/skel"
     mkdir -p "${LB_DIR}/config/includes.chroot/root"
-    mkdir -p "${LB_DIR}/config/includes.chroot/home/xedra"
+    mkdir -p "${LB_DIR}/config/includes.chroot/home/live"
     mkdir -p "${LB_DIR}/config/includes.chroot/etc/X11"
     mkdir -p "${LB_DIR}/config/includes.chroot/usr/local/bin"
 
@@ -400,7 +438,7 @@ configure_chroot_overlays() {
     if [[ "${BUILD_PROFILE}" != "minimal" ]]; then
         mkdir -p "${LB_DIR}/config/includes.chroot/etc/skel/.fluxbox"
         mkdir -p "${LB_DIR}/config/includes.chroot/root/.fluxbox"
-        mkdir -p "${LB_DIR}/config/includes.chroot/home/xedra/.fluxbox"
+        mkdir -p "${LB_DIR}/config/includes.chroot/home/live/.fluxbox"
 
         # Configure Xorg wrapper permissions for non-root console startx
         cat << 'XWRAP_EOF' > "${LB_DIR}/config/includes.chroot/etc/X11/Xwrapper.config"
@@ -413,10 +451,10 @@ XWRAP_EOF
         if [[ -f "${CONFIG_DIR}/xinitrc" ]]; then
             cp "${CONFIG_DIR}/xinitrc" "${LB_DIR}/config/includes.chroot/etc/skel/.xinitrc"
             cp "${CONFIG_DIR}/xinitrc" "${LB_DIR}/config/includes.chroot/root/.xinitrc"
-            cp "${CONFIG_DIR}/xinitrc" "${LB_DIR}/config/includes.chroot/home/xedra/.xinitrc"
+            cp "${CONFIG_DIR}/xinitrc" "${LB_DIR}/config/includes.chroot/home/live/.xinitrc"
             chmod 755 "${LB_DIR}/config/includes.chroot/etc/skel/.xinitrc"
             chmod 755 "${LB_DIR}/config/includes.chroot/root/.xinitrc"
-            chmod 755 "${LB_DIR}/config/includes.chroot/home/xedra/.xinitrc"
+            chmod 755 "${LB_DIR}/config/includes.chroot/home/live/.xinitrc"
             echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] .xinitrc overlay added"
         fi
 
@@ -424,31 +462,31 @@ XWRAP_EOF
         if [[ -f "${CONFIG_DIR}/fluxbox/menu" ]]; then
             cp "${CONFIG_DIR}/fluxbox/menu" "${LB_DIR}/config/includes.chroot/etc/skel/.fluxbox/menu"
             cp "${CONFIG_DIR}/fluxbox/menu" "${LB_DIR}/config/includes.chroot/root/.fluxbox/menu"
-            cp "${CONFIG_DIR}/fluxbox/menu" "${LB_DIR}/config/includes.chroot/home/xedra/.fluxbox/menu"
+            cp "${CONFIG_DIR}/fluxbox/menu" "${LB_DIR}/config/includes.chroot/home/live/.fluxbox/menu"
             echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] Fluxbox menu overlay added"
         fi
 
-        # Install .profile with autostart into /etc/skel and /home/xedra
+        # Install .profile with autostart into /etc/skel and /home/live
         cat << 'PROFILE_EOF' > "${LB_DIR}/config/includes.chroot/etc/skel/.profile"
 # ~/.profile: executed by Bourne-compatible login shells
 if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
     startx -- vt1 -keeptty
 fi
 PROFILE_EOF
-        cp "${LB_DIR}/config/includes.chroot/etc/skel/.profile" "${LB_DIR}/config/includes.chroot/home/xedra/.profile"
+        cp "${LB_DIR}/config/includes.chroot/etc/skel/.profile" "${LB_DIR}/config/includes.chroot/home/live/.profile"
         chmod 644 "${LB_DIR}/config/includes.chroot/etc/skel/.profile"
-        chmod 644 "${LB_DIR}/config/includes.chroot/home/xedra/.profile"
-        echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] .profile (auto-startx) overlay added to /etc/skel and /home/xedra"
+        chmod 644 "${LB_DIR}/config/includes.chroot/home/live/.profile"
+        echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] .profile (auto-startx) overlay added to /etc/skel and /home/live"
     else
         # Minimal Profile: pure CLI login
         cat << 'PROFILE_EOF' > "${LB_DIR}/config/includes.chroot/etc/skel/.profile"
 # ~/.profile: executed by Bourne-compatible login shells
 # Minimal Edition: pure text console
 PROFILE_EOF
-        cp "${LB_DIR}/config/includes.chroot/etc/skel/.profile" "${LB_DIR}/config/includes.chroot/home/xedra/.profile"
+        cp "${LB_DIR}/config/includes.chroot/etc/skel/.profile" "${LB_DIR}/config/includes.chroot/home/live/.profile"
         chmod 644 "${LB_DIR}/config/includes.chroot/etc/skel/.profile"
-        chmod 644 "${LB_DIR}/config/includes.chroot/home/xedra/.profile"
-        echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] .profile (CLI console) overlay added to /etc/skel and /home/xedra"
+        chmod 644 "${LB_DIR}/config/includes.chroot/home/live/.profile"
+        echo -e "  [ ${COLOR_GREEN}OK${COLOR_RESET} ] .profile (CLI console) overlay added to /etc/skel and /home/live"
     fi
 
     # Install custom Xedra branding and ASCII issue banner
@@ -458,14 +496,14 @@ PROFILE_EOF
     fi
 
     cat << ISSUE_EOF > "${LB_DIR}/config/includes.chroot/etc/issue"
- __  __          _           _     _                  
- \ \/ /___  __| |_ __ __ _  | |   (_)_ __  _   ___  __
-  \  // _ \/ _` | '__/ _` | | |   | | '_ \| | | \ \/ /
-  /  \  __/ (_| | | | (_| | | |___| | | | | |_| |>  < 
- /_/\_\___|\__,_|_|  \__,_| |_____|_|_| |_|\__,_/_/\_\
+      __  __        _               _     _                  
+      \ \/ /___  __| |_ __ __ _    | |   (_)_ __  _   ___  __
+       \  // _ \/ _` | '__/ _` |   | |   | | '_ \| | | \ \/ /
+       /  \  __/ (_| | | | (_| |   | |___| | | | | |_| |>  < 
+      /_/\_\___|\__,_|_|  \__,_|   |_____|_|_| |_|\__,_/_/\_\
 
- ${issue_title} (${DEBIAN_ARCH}) — ${DISTRO_CODENAME^}
- Kernel \r on an \m (\l)
+     ${issue_title} (${DEBIAN_ARCH}) — ${DISTRO_CODENAME^}
+     Kernel \r on an \m (\l)
 
 ISSUE_EOF
 
