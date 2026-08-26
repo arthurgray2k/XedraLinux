@@ -1,3 +1,9 @@
 # Xedra Linux - Build Artifacts Ignore Rules
 build/
 output/
+
+# Agent configuration files
+AGENTS.md
+GEMINI.md
+agents.md
+gemini.md
