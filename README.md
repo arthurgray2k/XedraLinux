@@ -2,6 +2,10 @@
 
 Xedra is a small, educational Debian-based Linux distribution engineered from first principles to understand how Linux distributions are constructed, configured, and packaged end-to-end.
 
+> [!NOTE]
+> **Go-Based Init Variant Available**:
+> We have a fully working variant, [**XedraLinux-GoSysVinit**](https://github.com/arthurgray2k/XedraLinux-GoSysVinit), which successfully uses the alternate [**`goSysVinit`**](https://github.com/arthurgray2k/goSysVinit) init system written in Go.
+
 ## Core Environments
 
 ```text
